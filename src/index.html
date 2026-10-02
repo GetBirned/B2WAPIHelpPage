@@ -13,8 +13,12 @@
 <script>
   // Apply a saved theme before first paint (no saved choice = follow the system setting).
   try { var t = localStorage.getItem('opsapi-guide-theme'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
-  // Pick the API from the link (#estimate-api or #reporting-api) before first paint, so the right colors show at once.
-  document.documentElement.setAttribute('data-product', { '#estimate-api': 'est', '#reporting-api': 'mr' }[location.hash] || 'ops');
+  // Pick the API from the link before first paint, so the right colors show at once:
+  // #estimate-api / #est-… opens the Estimate guide, #reporting-api / #mr-… the Management Reporting guide.
+  (function (h) {
+    var p = /^#(estimate-api$|est-)/.test(h) ? 'est' : /^#(reporting-api$|mr-)/.test(h) ? 'mr' : 'ops';
+    document.documentElement.setAttribute('data-product', p);
+  })(location.hash);
 </script>
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -54,7 +58,10 @@
   <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
   <symbol id="i-signal" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/></symbol>
   <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></symbol>
+  <symbol id="i-decode" viewBox="0 0 24 24"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1"/><path d="M12 8v4.5M12 16h.01"/></symbol>
   <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></symbol>
+  <!-- GitHub mark (Octicons, MIT) -->
+  <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.06-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
 </svg>
 
 <a class="skip-link" href="#main">Skip to content</a>
@@ -68,15 +75,18 @@
   </a>
   <div class="product-switch" role="group" aria-label="Choose an API">
     <button type="button" data-product="ops" aria-pressed="true" aria-label="Ops API"><span class="dot" aria-hidden="true"></span><span>Ops<span class="sfx"> API</span></span></button>
-    <button type="button" data-product="est" aria-pressed="false" aria-label="Estimate API, coming soon"><span class="dot" aria-hidden="true"></span><span>Estimate<span class="sfx"> API</span></span><span class="soon" aria-hidden="true">Soon</span></button>
-    <button type="button" data-product="mr" aria-pressed="false" aria-label="Management Reporting API, coming soon"><span class="dot" aria-hidden="true"></span><span><span class="pfx">Management </span>Reporting<span class="sfx"> API</span></span><span class="soon" aria-hidden="true">Soon</span></button>
+    <button type="button" data-product="est" aria-pressed="false" aria-label="Estimate API"><span class="dot" aria-hidden="true"></span><span>Estimate<span class="sfx"> API</span></span></button>
+    <button type="button" data-product="mr" aria-pressed="false" aria-label="Management Reporting API"><span class="dot" aria-hidden="true"></span><span><span class="pfx">Management </span>Reporting<span class="sfx"> API</span></span></button>
   </div>
   <nav class="topbar-links" aria-label="Quick links">
-    <a class="ops-only" href="https://www.postman.com/downloads/" target="_blank" rel="noopener"><svg class="ic"><use href="#i-download"/></svg>Postman</a>
-    <a class="ops-only" href="https://drive.google.com/file/d/1fJfhAF0z383mx1Io5qvFcJEHLsStrS9R/view?usp=sharing" target="_blank" rel="noopener"><svg class="ic"><use href="#i-folder"/></svg>Collection</a>
+    <a href="https://www.postman.com/downloads/" target="_blank" rel="noopener"><svg class="ic"><use href="#i-download"/></svg>Postman</a>
+    <a id="hdr-collection" href="https://drive.google.com/file/d/1fJfhAF0z383mx1Io5qvFcJEHLsStrS9R/view?usp=sharing" target="_blank" rel="noopener"><svg class="ic"><use href="#i-folder"/></svg>Collection</a>
     <a id="hdr-docs" href="https://b2w-eus10.b2w.trimble.com/OpsAPI_B2WTechSupport/doc/index.html" target="_blank" rel="noopener"><svg class="ic"><use href="#i-book"/></svg>API docs</a>
   </nav>
   <div class="topbar-actions">
+    <a class="icon-btn gh-btn" href="https://github.com/GetBirned" target="_blank" rel="noopener" aria-label="GitHub: GetBirned" title="GitHub: GetBirned"><svg class="ic ic-fill"><use href="#i-github"/></svg></a>
+    <button class="icon-btn env-btn" type="button" data-open-modal="checker" aria-label="Check an environment" title="Check an environment"><svg class="ic"><use href="#i-signal"/></svg></button>
+    <button class="icon-btn dec-btn" type="button" data-open-modal="decoder" aria-label="Decode an error" title="Decode an error"><svg class="ic"><use href="#i-decode"/></svg></button>
     <button class="icon-btn" id="theme-btn" type="button" aria-label="Switch between light and dark theme">
       <svg class="ic theme-light-only"><use href="#i-moon"/></svg>
       <svg class="ic theme-dark-only"><use href="#i-sun"/></svg>
@@ -95,6 +105,7 @@
     </div>
     <p class="toc-empty" id="toc-empty" hidden>No matching questions. Try “token”, “401”, or “Postman”.</p>
 
+   <div class="toc-product" data-for="ops">
     <div class="toc-group">
       <p class="toc-part">Part 1 · Understand the basics</p>
       <ol>
@@ -130,9 +141,10 @@
       <p class="toc-part">Part 4 · Troubleshoot</p>
       <ol>
         <li><a href="#work-a-ticket" data-k="diagnostic five questions ticket triage collect information support"><span class="n">17</span><span>How do I work an Ops API ticket?</span></a></li>
-        <li><a href="#troubleshooter" data-k="troubleshooter wizard decision tree interactive stuck"><span class="n">18</span><span>Where is this ticket stuck?</span></a></li>
-        <li><a href="#status-codes" data-k="200 201 204 400 401 403 404 406 409 422 500 status codes response errors"><span class="n">19</span><span>What do the status codes mean?</span></a></li>
-        <li><a href="#common-errors" data-k="403 forbidden insufficient privileges 401 unauthorized 404 loginwithtid 100 rows security role read-only license xml soap"><span class="n">20</span><span>How do I fix the most common errors?</span></a></li>
+        <li><a href="#decode-error" data-k="error decoder decode paste message response body status code postman powershell what does this mean"><span class="n">18</span><span>What does this error mean?</span></a></li>
+        <li><a href="#troubleshooter" data-k="troubleshooter wizard decision tree interactive stuck"><span class="n">19</span><span>Where is this ticket stuck?</span></a></li>
+        <li><a href="#status-codes" data-k="200 201 204 400 401 403 404 406 409 422 500 status codes response errors"><span class="n">20</span><span>What do the status codes mean?</span></a></li>
+        <li><a href="#common-errors" data-k="403 forbidden insufficient privileges 401 unauthorized 404 loginwithtid 100 rows security role read-only license xml soap"><span class="n">21</span><span>How do I fix the most common errors?</span></a></li>
       </ol>
     </div>
     <div class="toc-group">
@@ -146,7 +158,75 @@
         <li><a href="#resources" data-k="links resources download help site"><span class="n">F</span><span>Links and resources</span></a></li>
       </ol>
     </div>
-    <p class="toc-foot">Built from the Ops API Support Training. Examples verified against B2WTechSupport (Ops API 26.1.2.1) on October 2, 2026.</p>
+   </div>
+
+   <div class="toc-product" data-for="est">
+    <div class="toc-group">
+      <p class="toc-part">Part 1 · Understand the basics</p>
+      <ol>
+        <li><a href="#est-what" data-k="overview estimate rest differences ops no delete not supported"><span class="n">1</span><span>What is the B2W Estimate API?</span></a></li>
+        <li><a href="#est-url" data-k="url base cluster environment estapi_ cloud management portal checker ping"><span class="n">2</span><span>How do I find a customer’s Estimate API URL?</span></a></li>
+        <li><a href="#est-docs" data-k="swagger doc index.html catalog openapi json documentation"><span class="n">3</span><span>Where is the Estimate API documentation?</span></a></li>
+      </ol>
+    </div>
+    <div class="toc-group">
+      <p class="toc-part">Part 2 · Sign in</p>
+      <ol>
+        <li><a href="#est-login" data-k="login bearer token accesstoken username password active directory domain"><span class="n">4</span><span>How do I log in and get a Bearer Token?</span></a></li>
+        <li><a href="#est-headers" data-k="headers databasename clientid clientsecret client id security estimateref authorization"><span class="n">5</span><span>Which headers does every call need?</span></a></li>
+        <li><a href="#est-postman" data-k="postman collection import variables baseurl databasename pre-request script"><span class="n">6</span><span>How do I set up the Estimate Postman collection?</span></a></li>
+      </ol>
+    </div>
+    <div class="toc-group">
+      <p class="toc-part">Part 3 · Make calls</p>
+      <ol>
+        <li><a href="#est-query" data-k="odata filter select orderby top skip page items get read"><span class="n">7</span><span>How do I read, filter, and page Estimate data?</span></a></li>
+        <li><a href="#est-write" data-k="post put create update antitampertoken delete not supported 403"><span class="n">8</span><span>How do I create or update Estimate records?</span></a></li>
+        <li><a href="#est-endpoints" data-k="endpoints functional areas resources explorer list"><span class="n">9</span><span>Which endpoints are available?</span></a></li>
+      </ol>
+    </div>
+    <div class="toc-group">
+      <p class="toc-part">Part 4 · Troubleshoot</p>
+      <ol>
+        <li><a href="#est-decode" data-k="error decoder decode paste message response body status code postman powershell what does this mean"><span class="n">10</span><span>What does this error mean?</span></a></li>
+        <li><a href="#est-troubleshoot" data-k="troubleshoot errors 400 401 403 422 iis app pool network service db_owner ping login"><span class="n">11</span><span>How do I troubleshoot the Estimate API?</span></a></li>
+      </ol>
+    </div>
+   </div>
+
+   <div class="toc-product" data-for="mr">
+    <div class="toc-group">
+      <p class="toc-part">Part 1 · Understand the basics</p>
+      <ol>
+        <li><a href="#mr-what" data-k="overview management reporting data warehouse read only"><span class="n">1</span><span>What is the Management Reporting API?</span></a></li>
+        <li><a href="#mr-url" data-k="url base cluster environment mrapi_ cloud management portal checker ping"><span class="n">2</span><span>How do I find a customer’s MR API URL?</span></a></li>
+        <li><a href="#mr-docs" data-k="swagger doc index.html catalog openapi json documentation"><span class="n">3</span><span>Where is the MR API documentation?</span></a></li>
+      </ol>
+    </div>
+    <div class="toc-group">
+      <p class="toc-part">Part 2 · Sign in</p>
+      <ol>
+        <li><a href="#mr-login" data-k="login bearer token accesstoken username password active directory domain"><span class="n">4</span><span>How do I log in and get a Bearer Token?</span></a></li>
+        <li><a href="#mr-headers" data-k="headers databasename data warehouse clientid clientsecret estimateref authorization"><span class="n">5</span><span>Which headers does every call need?</span></a></li>
+        <li><a href="#mr-postman" data-k="postman collection import variables baseurl databasename estimateref pre-request script"><span class="n">6</span><span>How do I set up the MR Postman collection?</span></a></li>
+      </ol>
+    </div>
+    <div class="toc-group">
+      <p class="toc-part">Part 3 · Make calls</p>
+      <ol>
+        <li><a href="#mr-query" data-k="odata filter contains select orderby top skip page items pagination totalitems"><span class="n">7</span><span>How do I read, filter, and page report data?</span></a></li>
+        <li><a href="#mr-endpoints" data-k="endpoints functional areas explorer list pay items tasks bid results"><span class="n">8</span><span>Which endpoints are available?</span></a></li>
+      </ol>
+    </div>
+    <div class="toc-group">
+      <p class="toc-part">Part 4 · Troubleshoot</p>
+      <ol>
+        <li><a href="#mr-decode" data-k="error decoder decode paste message response body status code postman powershell what does this mean"><span class="n">9</span><span>What does this error mean?</span></a></li>
+        <li><a href="#mr-troubleshoot" data-k="troubleshoot errors 400 401 iis app pool network service db_owner connection string ping login"><span class="n">10</span><span>How do I troubleshoot the MR API?</span></a></li>
+      </ol>
+    </div>
+   </div>
+    <p class="toc-foot">Examples verified against the B2WTechSupport environment on October 2, 2026. The Ops API guide comes from the Ops API Support Training; the Estimate and Management Reporting guides come from their API documentation.</p>
   </nav>
   <div class="scrim" id="scrim" hidden></div>
 
@@ -164,6 +244,8 @@
             <a class="btn btn-primary ext" href="https://www.postman.com/downloads/" target="_blank" rel="noopener"><svg class="ic"><use href="#i-download"/></svg>Download Postman</a>
             <a class="btn ext" href="https://drive.google.com/file/d/1fJfhAF0z383mx1Io5qvFcJEHLsStrS9R/view?usp=sharing" target="_blank" rel="noopener"><svg class="ic"><use href="#i-folder"/></svg>Get the Postman collection</a>
             <a class="btn ext" href="https://b2w-eus10.b2w.trimble.com/OpsAPI_B2WTechSupport/doc/index.html" target="_blank" rel="noopener"><svg class="ic"><use href="#i-book"/></svg>Open the API docs</a>
+            <button class="btn" type="button" data-open-modal="checker"><svg class="ic"><use href="#i-signal"/></svg>Check an environment</button>
+            <button class="btn" type="button" data-open-modal="decoder"><svg class="ic"><use href="#i-decode"/></svg>Decode an error</button>
           </div>
         </div>
         <aside class="env-card" aria-label="Example environment used in this guide">
@@ -184,7 +266,7 @@
         <a class="path" href="#what-is-ops-api"><span class="path-icon"><svg class="ic"><use href="#i-play"/></svg></span><b>New to the Ops API <svg class="ic"><use href="#i-arrow"/></svg></b><span>What the API is, how a call is built, and where the docs live.</span></a>
         <a class="path" href="#install-postman"><span class="path-icon"><svg class="ic"><use href="#i-download"/></svg></span><b>Set up Postman <svg class="ic"><use href="#i-arrow"/></svg></b><span>Install it, import the team collection, and fill in your variables.</span></a>
         <a class="path" href="#bearer-token"><span class="path-icon"><svg class="ic"><use href="#i-key"/></svg></span><b>Get a bearer token <svg class="ic"><use href="#i-arrow"/></svg></b><span>Log in with your TID UUID and User API Secret in under a minute.</span></a>
-        <a class="path" href="#work-a-ticket"><span class="path-icon"><svg class="ic"><use href="#i-ticket"/></svg></span><b>Work a ticket <svg class="ic"><use href="#i-arrow"/></svg></b><span>Five diagnostic questions, a troubleshooter, and fixes for common errors.</span></a>
+        <a class="path" href="#work-a-ticket"><span class="path-icon"><svg class="ic"><use href="#i-ticket"/></svg></span><b>Work a ticket <svg class="ic"><use href="#i-arrow"/></svg></b><span>Five diagnostic questions, an error decoder, a troubleshooter, and common fixes.</span></a>
       </nav>
     </section>
 
@@ -291,7 +373,7 @@ Content-Type: application/json
   "BusinessUnitUniqueName": "Organization"
 }</code></pre>
       </div>
-      <p>The response always carries a status code, such as <span class="sc sc-2">201 Created</span> or <span class="sc sc-4">401 Unauthorized</span>, and plain text shaped as JSON. You will see the same responses in Postman, in Swagger, and in integration logs. <a href="#status-codes">Question 19</a> explains every code.</p>
+      <p>The response always carries a status code, such as <span class="sc sc-2">201 Created</span> or <span class="sc sc-4">401 Unauthorized</span>, and plain text shaped as JSON. You will see the same responses in Postman, in Swagger, and in integration logs. <a href="#status-codes">Question 20</a> explains every code.</p>
     </section>
 
     <!-- 3 ---------------------------------------------------------- -->
@@ -338,31 +420,12 @@ Content-Type: application/json
       </div>
       <div class="callout note">
         <svg class="ic"><use href="#i-info"/></svg>
-        <div><span class="callout-title">Don’t mix up the APIs</span><p><code>EstAPI_</code> (Estimate API) and <code>MRAPI_</code> addresses on the same panel are different APIs with their own secrets. This guide covers the Ops API, <code>OpsAPI_</code>, only.</p></div>
+        <div><span class="callout-title">Don’t mix up the APIs</span><p><code>EstAPI_</code> (Estimate API) and <code>MRAPI_</code> (Management Reporting API) addresses on the same panel are different APIs with their own credentials. Each has its own guide; switch to it at the top of the page.</p></div>
       </div>
 
-      <div class="tool" id="url-builder">
-        <div class="tool-head"><span class="tool-tag">Tool</span><h4>Build a customer’s API URLs</h4><span class="meta">Paste any address from their site, or type the parts</span></div>
-        <div class="tool-body">
-          <div class="fields">
-            <div class="field span-2">
-              <label for="ub-paste">Paste a B2W address (optional)</label>
-              <input id="ub-paste" type="url" placeholder="https://b2w-eus10.b2w.trimble.com/B2WTechSupport/…" autocomplete="off" spellcheck="false">
-              <span class="hint">Works with the Ops site, the API, or a Swagger link. The cluster and environment fill in below.</span>
-            </div>
-            <div class="field">
-              <label for="ub-cluster">Cluster (host)</label>
-              <input id="ub-cluster" type="text" value="b2w-eus10.b2w.trimble.com" autocomplete="off" spellcheck="false">
-            </div>
-            <div class="field">
-              <label for="ub-env">Environment</label>
-              <input id="ub-env" type="text" value="B2WTechSupport" autocomplete="off" spellcheck="false">
-            </div>
-          </div>
-          <div class="builder-out" id="ub-out" aria-live="polite"></div>
-          <p class="builder-msg" id="ub-msg">Open the Ping link to confirm the address. It answers without a login.</p>
-        </div>
-      </div>
+      <h4>Check a customer’s environment</h4>
+      <p>Paste the customer’s Ops address. The checker builds all three API addresses and sends a sample request to each one to see whether it answers.</p>
+      <div class="checker-mount wide" data-checker></div>
       <div class="callout tip">
         <svg class="ic"><use href="#i-bulb"/></svg>
         <div><span class="callout-title">A typo answers with a 404 page</span><p>If the environment name is wrong, the server still responds, but with an HTML “404” error page instead of a result. If <code>/Ping/hello</code> returns that page, recheck the spelling and the <code>OpsAPI_</code> prefix.</p></div>
@@ -673,7 +736,7 @@ Content-Type: application/json
         <li><div><span class="step-title">Select “Login with TID uuid and API secret”</span>It is a <code>GET</code> request to <code>{{baseUrl}}/Login</code>.</div></li>
         <li><div><span class="step-title">Check the headers</span>On the <strong>Headers</strong> tab, <code>tiduuid</code> and <code>apiSecret</code> pull their values from your variables.</div></li>
         <li><div><span class="step-title">Click Send</span>Or press <kbd>Ctrl</kbd>+<kbd>Enter</kbd>.</div></li>
-        <li><div><span class="step-title">Look for 200 OK</span>Any other code means the login failed. See <a href="#common-errors">question 20</a>.</div></li>
+        <li><div><span class="step-title">Look for 200 OK</span>Any other code means the login failed. See <a href="#common-errors">question 21</a>.</div></li>
         <li><div><span class="step-title">Find the AccessToken</span>That value is your bearer token. Make sure it is in the <code>accessToken</code> variable before you call other endpoints.</div></li>
       </ol>
       <figure class="shot wide">
@@ -1052,7 +1115,7 @@ Authorization: Bearer &lt;AccessToken&gt;</code></pre>
       <h4>Rules to remember</h4>
       <ul>
         <li><strong>You cannot change an ObjectID through the API.</strong> It is the record’s permanent key.</li>
-        <li>Each action needs the matching API permission in the caller’s security role: Create, View, Edit, or Delete (<a href="#common-errors">question 20</a>).</li>
+        <li>Each action needs the matching API permission in the caller’s security role: Create, View, Edit, or Delete (<a href="#common-errors">question 21</a>).</li>
         <li>A read-only license cannot make changes, even if the security role would allow them.</li>
       </ul>
       <div class="callout training">
@@ -1068,20 +1131,7 @@ Authorization: Bearer &lt;AccessToken&gt;</code></pre>
         <span class="answer-label">Short answer</span>
         <p>The B2WTechSupport catalog (version 26.1.2.1) lists 63 functional areas and 272 operations. Most areas support GET, POST, PUT, and DELETE plus a <code>/schema</code> call. Search the list below, then open Swagger for the fields.</p>
       </div>
-      <div class="tool" id="endpoint-explorer">
-        <div class="tool-head"><span class="tool-tag">Tool</span><h4>Endpoint explorer</h4><span class="meta" id="ep-count" aria-live="polite"></span></div>
-        <div class="tool-body">
-          <div class="ep-controls">
-            <div class="field">
-              <label for="ep-search">Search endpoints</label>
-              <input id="ep-search" type="search" placeholder="Try “job”, “equipment”, or “true-up”" autocomplete="off" spellcheck="false">
-            </div>
-            <div class="ep-filters" id="ep-filters" role="group" aria-label="Filter by area"></div>
-          </div>
-          <div class="ep-list" id="ep-list"></div>
-          <div class="ep-legend"><span><span class="m m-sm m-get">GET</span> read</span><span><span class="m m-sm m-post">POST</span> create</span><span><span class="m m-sm m-put">PUT</span> update</span><span><span class="m m-sm m-delete">DELETE</span> remove</span><span><code>/schema</code> field definitions</span></div>
-        </div>
-      </div>
+      <div class="tool" data-explorer="ops"></div>
       <p>The list reflects the B2WTechSupport catalog on October 2, 2026. Environments on other versions may differ, and their own Swagger page is always the source of truth.</p>
     </section>
 
@@ -1124,8 +1174,23 @@ Authorization: Bearer &lt;AccessToken&gt;</code></pre>
     </section>
 
     <!-- 18 --------------------------------------------------------- -->
+    <section class="q" id="decode-error" aria-labelledby="h-decode">
+      <div class="q-head"><span class="q-num">18</span><h3 id="h-decode">What does this error mean?<a class="anchor" href="#decode-error" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Paste what the customer sent into the decoder: a status line, a response body, a Postman or PowerShell error, or the request URL. It works out which API and call the error came from, names the likely cause, and links to the fix.</p>
+      </div>
+      <div class="decoder-mount wide" data-decoder></div>
+      <div class="callout tip">
+        <svg class="ic"><use href="#i-bulb"/></svg>
+        <div><span class="callout-title">Paste the request URL too</span><p>The URL tells the decoder the API, the environment, and the endpoint. It then checks the endpoint name against the catalog, and <b>Check it</b> runs the environment checker on that customer’s environment.</p></div>
+      </div>
+      <p>The decoder reads the messages the Ops API sends, such as the <code>InternalMessage</code> on a 403 that names the missing privilege, plus errors from Postman, PowerShell, IIS, and the network. Decoding runs entirely in your browser. Still, take tokens and secrets out of anything you copy into a ticket.</p>
+    </section>
+
+    <!-- 19 --------------------------------------------------------- -->
     <section class="q" id="troubleshooter" aria-labelledby="h-ts">
-      <div class="q-head"><span class="q-num">18</span><h3 id="h-ts">Where is this ticket stuck?<a class="anchor" href="#troubleshooter" aria-label="Link to this question">#</a></h3></div>
+      <div class="q-head"><span class="q-num">19</span><h3 id="h-ts">Where is this ticket stuck?<a class="anchor" href="#troubleshooter" aria-label="Link to this question">#</a></h3></div>
       <div class="answer">
         <span class="answer-label">Short answer</span>
         <p>Answer a few questions about what the customer sees. The troubleshooter walks the five diagnostic questions and lands on the likely cause and fix.</p>
@@ -1137,12 +1202,12 @@ Authorization: Bearer &lt;AccessToken&gt;</code></pre>
           <div id="ts-stage" aria-live="polite"></div>
         </div>
       </div>
-      <p class="no-print">Prefer to read it all at once? Every cause and fix the troubleshooter can reach is also listed in <a href="#common-errors">question 20</a>.</p>
+      <p class="no-print">Prefer to read it all at once? Every cause and fix the troubleshooter can reach is also listed in <a href="#common-errors">question 21</a>.</p>
     </section>
 
-    <!-- 19 --------------------------------------------------------- -->
+    <!-- 20 --------------------------------------------------------- -->
     <section class="q" id="status-codes" aria-labelledby="h-codes">
-      <div class="q-head"><span class="q-num">19</span><h3 id="h-codes">What do the status codes mean?<a class="anchor" href="#status-codes" aria-label="Link to this question">#</a></h3></div>
+      <div class="q-head"><span class="q-num">20</span><h3 id="h-codes">What do the status codes mean?<a class="anchor" href="#status-codes" aria-label="Link to this question">#</a></h3></div>
       <div class="answer">
         <span class="answer-label">Short answer</span>
         <p>2xx means it worked. 4xx means the request was wrong: bad input, a bad or missing token, missing permissions, or something not found. 5xx means Ops hit an unexpected error. The same code can mean different things on the login call and on a data call.</p>
@@ -1167,9 +1232,9 @@ Authorization: Bearer &lt;AccessToken&gt;</code></pre>
       </div>
     </section>
 
-    <!-- 20 --------------------------------------------------------- -->
+    <!-- 21 --------------------------------------------------------- -->
     <section class="q" id="common-errors" aria-labelledby="h-errors">
-      <div class="q-head"><span class="q-num">20</span><h3 id="h-errors">How do I fix the most common errors?<a class="anchor" href="#common-errors" aria-label="Link to this question">#</a></h3></div>
+      <div class="q-head"><span class="q-num">21</span><h3 id="h-errors">How do I fix the most common errors?<a class="anchor" href="#common-errors" aria-label="Link to this question">#</a></h3></div>
       <div class="answer">
         <span class="answer-label">Short answer</span>
         <p>Find the symptom below. Each card gives the likely cause and the fix. Isolate the failing step first: connection, login, or data call.</p>
@@ -1598,70 +1663,914 @@ Authorization: Bearer &lt;AccessToken&gt;</code></pre>
 
    <!-- ################################################ ESTIMATE API VIEW -->
    <div class="product-view" data-view="est">
-    <section class="hero soon-hero" aria-labelledby="est-title">
-      <div class="soon-copy">
-        <p class="eyebrow">B2W Support Team · Estimate API</p>
-        <h1 id="est-title">B2W Estimate API Help Guide</h1>
-        <p class="soon-badge">Coming soon</p>
-        <p class="lede">This guide is being written. It will cover the Estimate API the same way the Ops API guide does: finding the API, getting credentials, generating a token, making calls, and working tickets.</p>
-        <div class="hero-actions">
-          <button class="btn btn-primary" type="button" data-go="ops"><svg class="ic"><use href="#i-arrow"/></svg>Go to the Ops API guide</button>
-          <a class="btn ext" href="https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport/doc/index.html" target="_blank" rel="noopener"><svg class="ic"><use href="#i-book"/></svg>Open the Estimate API docs</a>
+    <section class="hero" aria-labelledby="est-title">
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow">B2W Support Team · Estimate API</p>
+          <h1 id="est-title">B2W Estimate API Help Guide</h1>
+          <p class="lede">How to reach a customer’s Estimate API, sign in, send the right headers, read and update estimate data, and work Estimate API tickets. Every example uses the <strong>B2WTechSupport</strong> environment.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary ext" href="https://www.postman.com/downloads/" target="_blank" rel="noopener"><svg class="ic"><use href="#i-download"/></svg>Download Postman</a>
+            <a class="btn ext" href="https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport/Documentation/EstAPI.postman_collection.json" target="_blank" rel="noopener"><svg class="ic"><use href="#i-folder"/></svg>Get the Estimate collection</a>
+            <a class="btn ext" href="https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport/doc/index.html" target="_blank" rel="noopener"><svg class="ic"><use href="#i-book"/></svg>Open the API docs</a>
+            <button class="btn" type="button" data-open-modal="checker"><svg class="ic"><use href="#i-signal"/></svg>Check an environment</button>
+            <button class="btn" type="button" data-open-modal="decoder"><svg class="ic"><use href="#i-decode"/></svg>Decode an error</button>
+          </div>
         </div>
-      </div>
-      <div class="soon-grid">
-        <div class="soon-card">
-          <h2>Already confirmed for B2WTechSupport</h2>
-          <dl class="facts">
-            <div><dt>API address</dt><dd><div class="copyline"><code>https://b2w-eus10.b2w.trimble.com<wbr>/EstAPI_B2WTechSupport</code><button class="mini-btn" type="button" data-copy="https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport" aria-label="Copy the Estimate API address"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>Same pattern as the Ops API, with the <code>EstAPI_</code> prefix.</dd></div>
-            <div><dt>API docs</dt><dd>Add <code>/doc/index.html</code> to the address, just like the Ops API.</dd></div>
-            <div><dt>Connectivity check</dt><dd><code>/Ping/hello</code> answers without a login: <code>(b2w-eus10-iis2) hello|</code></dd></div>
-            <div><dt>Credentials</dt><dd>The Cloud Management Portal lists a separate <strong>Est API Secret</strong> under Estimate API Configuration. It is not the Ops API secret.</dd></div>
+        <aside class="env-card" aria-label="Example environment used in this guide">
+          <div class="env-head"><span class="live-dot" aria-hidden="true"></span>Example environment<span class="chip">Checked Oct 2, 2026</span></div>
+          <dl>
+            <dt>Environment</dt><dd><strong>B2WTechSupport</strong></dd>
+            <dt class="full">Estimate API URL</dt>
+            <dd class="full"><div class="copyline" style="margin:0"><code>https://b2w-eus10.b2w.trimble.com<wbr>/EstAPI_B2WTechSupport</code><button class="mini-btn" type="button" data-copy="https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport" aria-label="Copy the B2WTechSupport Estimate API URL"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div></dd>
+            <dt>API version</dt><dd><code>v1</code></dd>
+            <dt>Sign-in</dt><dd>Active Directory user name and password</dd>
+            <dt>Methods</dt><dd><span class="m m-sm m-get">GET</span> <span class="m m-sm m-post">POST</span> <span class="m m-sm m-put">PUT</span> · no DELETE</dd>
           </dl>
-        </div>
-        <div class="soon-card">
-          <h2>API guides</h2>
-          <ul class="status-list">
-            <li><span class="nm"><span class="sw sw-ops" aria-hidden="true"></span>Ops API</span><button class="chip chip-ok chip-btn" type="button" data-go="ops">Available</button></li>
-            <li aria-current="true"><span class="nm"><span class="sw sw-est" aria-hidden="true"></span>Estimate API</span><span class="chip">Coming soon</span></li>
-            <li><span class="nm"><span class="sw sw-mr" aria-hidden="true"></span>Management Reporting API</span><span class="chip">Coming soon</span></li>
+        </aside>
+      </div>
+      <nav class="paths" aria-label="Where to start">
+        <a class="path" href="#est-login"><span class="path-icon"><svg class="ic"><use href="#i-key"/></svg></span><b>Get a bearer token <svg class="ic"><use href="#i-arrow"/></svg></b><span>Log in with an Active Directory account and get an AccessToken.</span></a>
+        <a class="path" href="#est-headers"><span class="path-icon"><svg class="ic"><use href="#i-list"/></svg></span><b>Send the right headers <svg class="ic"><use href="#i-arrow"/></svg></b><span>DatabaseName, Client ID Security, and EstimateREF explained.</span></a>
+        <a class="path" href="#est-endpoints"><span class="path-icon"><svg class="ic"><use href="#i-search"/></svg></span><b>Find an endpoint <svg class="ic"><use href="#i-arrow"/></svg></b><span>Search all 227 operations across estimates and resources.</span></a>
+        <a class="path" href="#est-troubleshoot"><span class="path-icon"><svg class="ic"><use href="#i-ticket"/></svg></span><b>Work a ticket <svg class="ic"><use href="#i-arrow"/></svg></b><span>App-up and login tests, plus fixes for common errors.</span></a>
+      </nav>
+    </section>
+
+    <div class="part" id="est-part-basics">
+      <span class="part-label">Part 1</span>
+      <h2>Understand the basics</h2>
+      <p>What the Estimate API covers, how it differs from the Ops API, and where to find it.</p>
+    </div>
+
+    <section class="q" id="est-what" aria-labelledby="h-est-what">
+      <div class="q-head"><span class="q-num">1</span><h3 id="h-est-what">What is the B2W Estimate API?<a class="anchor" href="#est-what" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>The Estimate API lets other software read and write B2W Estimate data: estimates and their items and components, plus the resources, organizations, and categories behind them. It is a REST API that speaks JSON, like the Ops API, but it signs in differently and needs a few extra headers.</p>
+      </div>
+      <p>The B2WTechSupport catalog lists 56 functional areas and 227 operations. It supports <span class="m m-get">GET</span>, <span class="m m-post">POST</span>, and <span class="m m-put">PUT</span>. There is no DELETE.</p>
+      <h4>How it differs from the Ops API</h4>
+      <div class="table-wrap wide">
+        <table class="compare">
+          <thead><tr><th scope="col"></th><th scope="col">Ops API</th><th scope="col">Estimate API</th></tr></thead>
+          <tbody>
+            <tr><td>Address prefix</td><td><code>OpsAPI_</code></td><td><code>EstAPI_</code></td></tr>
+            <tr><td>Login</td><td>TID UUID + secret, client ID + secret, or user name + password</td><td>Active Directory user name + password only</td></tr>
+            <tr><td>Extra headers</td><td>None beyond the token</td><td><code>DatabaseName</code> on every data call; <code>ClientID</code> and <code>ClientSecret</code> when Client ID Security is on</td></tr>
+            <tr><td>Results</td><td>A JSON array</td><td>An object with an <code>Items</code> array</td></tr>
+            <tr><td>Updates</td><td>PUT the whole record</td><td>PUT the whole record, including its <code>AntiTamperToken</code></td></tr>
+            <tr><td>Delete</td><td>Supported</td><td>Not supported</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <svg class="ic"><use href="#i-alert"/></svg>
+        <div><span class="callout-title">Not supported by the Estimate API</span>
+          <ul>
+            <li>DELETE.</li>
+            <li>Creating, updating, or modifying the cost structure in an estimate.</li>
+            <li>Creating, updating, or modifying container components in an estimate or in resources.</li>
+            <li>Creating or updating organizations in an estimate.</li>
           </ul>
         </div>
+      </div>
+    </section>
+
+    <section class="q" id="est-url" aria-labelledby="h-est-url">
+      <div class="q-head"><span class="q-num">2</span><h3 id="h-est-url">How do I find a customer’s Estimate API URL?<a class="anchor" href="#est-url" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Use the same formula as the Ops API with the <code>EstAPI_</code> prefix: <code>https://{cluster}/EstAPI_{environment}</code>. For B2WTechSupport, that is <code>https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport</code>.</p>
+      </div>
+      <div class="url-anatomy wide" role="img" aria-label="https:// then the cluster b2w-eus10.b2w.trimble.com, a slash, the EstAPI_ prefix, and the environment B2WTechSupport.">
+        <span class="seg seg-muted"><span>https://</span><small>&nbsp;</small></span>
+        <span class="seg seg-cluster"><span>b2w-eus10.b2w.trimble.com</span><small>Cluster (host)</small></span>
+        <span class="seg seg-muted"><span>/</span><small>&nbsp;</small></span>
+        <span class="seg seg-prefix"><span>EstAPI_</span><small>Prefix</small></span>
+        <span class="seg seg-env"><span>B2WTechSupport</span><small>Environment</small></span>
+      </div>
+      <p>The path is not case-sensitive, so <code>estapi_B2WTechSupport</code> works too. In the Cloud Management Portal, the address is listed as the <strong>Est API URL</strong> under <strong>Estimate API Configuration</strong>:</p>
+      <figure class="shot wide">
+        <button class="frame" type="button" aria-label="Enlarge the Estimate API Configuration screenshot"><img src="images/portal_estimate_config.webp" width="1660" height="118" alt="Cloud Management Portal, Estimate API Configuration for B2WTechSupport: Est API URL https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport and MR API URL https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport." decoding="async"><span class="zoom-hint"><svg class="ic"><use href="#i-zoom"/></svg>Enlarge</span></button>
+        <figcaption><b>Figure 1.</b> <b>①</b> The Est API URL. <b>②</b> The MR API URL sits in the same row. The Est API Secret is further right on that row.</figcaption>
+      </figure>
+      <h4>Check a customer’s environment</h4>
+      <div class="checker-mount wide" data-checker></div>
+    </section>
+
+    <section class="q" id="est-docs" aria-labelledby="h-est-docs">
+      <div class="q-head"><span class="q-num">3</span><h3 id="h-est-docs">Where is the Estimate API documentation?<a class="anchor" href="#est-docs" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Add <code>/doc/index.html</code> to the Estimate API URL. It is a standard Swagger page with the setup notes at the top and every functional area below.</p>
+      </div>
+      <div class="copyline"><code>https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport/doc/index.html</code><a class="mini-btn" href="https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport/doc/index.html" target="_blank" rel="noopener"><svg class="ic"><use href="#i-external"/></svg>Open</a><button class="mini-btn" type="button" data-copy="https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport/doc/index.html" aria-label="Copy the Estimate API docs URL"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+      <figure class="shot">
+        <button class="frame" type="button" aria-label="Enlarge the Estimate API docs screenshot"><img src="images/est_docs_overview.webp" width="1920" height="998" alt="The B2W Estimate API v1 Swagger page with collapsible General Information, Post-Installation Step, Configuration, Usage Guidelines, Testing Guidelines, and Troubleshooting Guidelines sections, then the list of functional areas starting with BidAs and BidSchedule." decoding="async"><span class="zoom-hint"><svg class="ic"><use href="#i-zoom"/></svg>Enlarge</span></button>
+        <figcaption><b>Figure 2.</b> Click a heading to expand it. <b>①</b> Usage Guidelines covers login, Client ID Security, and the AntiTamperToken. <b>②</b> Testing Guidelines links the official Postman collection and the basic tests. <b>③</b> Functional areas expand into their operations.</figcaption>
+      </figure>
+      <p>The machine-readable catalog is at <code>/doc/v1/EstAPI.json</code>. The setup sections (Post-Installation Step and Configuration) describe on-premises installs, so for cloud customers the ones to read are Usage, Testing, and Troubleshooting.</p>
+    </section>
+
+    <div class="part" id="est-part-signin">
+      <span class="part-label">Part 2</span>
+      <h2>Sign in</h2>
+      <p>Get a token, then send it with the headers every Estimate call needs.</p>
+    </div>
+
+    <section class="q" id="est-login" aria-labelledby="h-est-login">
+      <div class="q-head"><span class="q-num">4</span><h3 id="h-est-login">How do I log in and get a Bearer Token?<a class="anchor" href="#est-login" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Send <code>GET {baseUrl}/Login</code> with <code>userName</code> and <code>password</code> headers for an Active Directory account that has access to Estimate. The <code>AccessToken</code> in the response is your bearer token.</p>
+      </div>
+      <ol class="steps plain">
+        <li><div><span class="step-title">Use a Windows account</span>The <code>userName</code> is the Windows account name of an Active Directory user who can access the Estimate data, written as <code>DOMAIN\user</code>.</div></li>
+        <li><div><span class="step-title">Send both headers</span>Credentials go in headers only. Both <code>userName</code> and <code>password</code> are required.</div></li>
+        <li><div><span class="step-title">Copy the AccessToken</span>Send it as <code>Authorization: Bearer &lt;AccessToken&gt;</code> on every other call. The response also has a <code>RefreshToken</code>, which the docs say to ignore; it is there for future use.</div></li>
+      </ol>
+      <div class="tabs" data-tabgroup="client">
+        <div class="tablist" role="tablist" aria-label="Choose a tool">
+          <button type="button" role="tab" data-tab="postman" aria-selected="true">Postman</button>
+          <button type="button" role="tab" data-tab="powershell" aria-selected="false">PowerShell</button>
+          <button type="button" role="tab" data-tab="curl" aria-selected="false">cURL</button>
+          <button type="button" role="tab" data-tab="http" aria-selected="false">Raw HTTP</button>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="postman">
+          <span class="tab-label">Postman</span>
+          <div class="req">
+            <div class="req-line"><span class="m m-get">GET</span><code><span class="var">{{BaseURL}}</span>/Login</code></div>
+            <div class="req-rows">
+              <p class="sec">Headers</p>
+              <p class="k">userName</p><p><span class="var">{{UserName}}</span> (DOMAIN\user)</p>
+              <p class="k">password</p><p><span class="var">{{Password}}</span></p>
+              <p class="sec">Body</p>
+              <p class="k">none</p><p>Login never takes a body.</p>
+            </div>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="powershell" hidden>
+          <span class="tab-label">PowerShell</span>
+          <div class="code">
+            <div class="code-head"><span>PowerShell</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="powershell"><code>$baseUrl = "https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport"
+
+# Windows (Active Directory) account of an Estimate user, as DOMAIN\user
+$login = Invoke-RestMethod -Method Get -Uri "$baseUrl/Login" -Headers @{
+    userName = "DOMAIN\jsmith"
+    password = "&lt;password&gt;"
+}
+
+$token = $login.AccessToken   # this is your bearer token</code></pre>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="curl" hidden>
+          <span class="tab-label">cURL</span>
+          <div class="code">
+            <div class="code-head"><span>cURL · bash, macOS, Git Bash</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="bash"><code>curl -s 'https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport/Login' \
+  -H 'userName: DOMAIN\jsmith' \
+  -H 'password: &lt;password&gt;'</code></pre>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="http" hidden>
+          <span class="tab-label">Raw HTTP</span>
+          <div class="code">
+            <div class="code-head"><span>HTTP request</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="http"><code>GET /EstAPI_B2WTechSupport/Login HTTP/1.1
+Host: b2w-eus10.b2w.trimble.com
+userName: DOMAIN\jsmith
+password: &lt;password&gt;</code></pre>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Login returns</th><th scope="col">Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><span class="sc sc-2">200 OK</span></td><td>A JWT with the <code>AccessToken</code> (and a <code>RefreshToken</code> to ignore).</td></tr>
+            <tr><td><span class="sc sc-4">400</span></td><td>A header is missing or invalid. With no headers, B2WTechSupport answers <code>{"Error":"Both userName and password must be specified in the request header"}</code>.</td></tr>
+            <tr><td><span class="sc sc-4">401</span></td><td>The user is not authorized.</td></tr>
+            <tr><td><span class="sc sc-5">500</span></td><td>The server hit an internal error. Capture the details and escalate.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout danger">
+        <svg class="ic"><use href="#i-shield"/></svg>
+        <div><span class="callout-title">This login uses a real Windows password</span><p>Never ask a customer to send their password, and never paste one into a ticket or chat. If you need to test, use an account you are allowed to use.</p></div>
+      </div>
+    </section>
+
+    <section class="q" id="est-headers" aria-labelledby="h-est-headers">
+      <div class="q-head"><span class="q-num">5</span><h3 id="h-est-headers">Which headers does every call need?<a class="anchor" href="#est-headers" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Every data call needs <code>Authorization: Bearer &lt;AccessToken&gt;</code> and a <code>DatabaseName</code> header naming the customer’s Estimate database. Add <code>ClientID</code> and <code>ClientSecret</code> when Client ID Security is on, and <code>EstimateREF</code> on the lookups that belong to one estimate.</p>
+      </div>
+      <div class="table-wrap wide">
+        <table>
+          <thead><tr><th scope="col">Header</th><th scope="col">When</th><th scope="col">Value</th></tr></thead>
+          <tbody>
+            <tr><td><code>Authorization</code></td><td>Every data call</td><td><code>Bearer &lt;AccessToken&gt;</code> from Login</td></tr>
+            <tr><td><code>DatabaseName</code></td><td>Every data call</td><td>The customer’s Estimate database. The official collection’s placeholder is <code>B2WSample</code>.</td></tr>
+            <tr><td><code>ClientID</code> · <code>ClientSecret</code></td><td>When Client ID Security is on</td><td>The values set in the API</td></tr>
+            <tr><td><code>EstimateREF</code></td><td>15 estimate-specific lookups (below)</td><td>The <code>ObjectID</code> of the estimate</td></tr>
+            <tr><td><code>Content-Type</code></td><td>POST and PUT</td><td><code>application/json</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h4>Client ID Security</h4>
+      <p>Client ID Security is optional and set when the API is installed. When it is on, every call must include <code>ClientID</code> and <code>ClientSecret</code> headers that match the API’s values. If they don’t match, the call returns <span class="sc sc-4">401</span>, the same code as a bad token.</p>
+      <div class="callout note">
+        <svg class="ic"><use href="#i-info"/></svg>
+        <div><span class="callout-title">Cloud environments</span><p>The Cloud Management Portal lists each environment’s API Client ID and an <strong>Est API Secret</strong>. Confirm with the team which values a customer’s Estimate API expects, and treat both as credentials.</p></div>
+      </div>
+      <h4>Calls that need EstimateREF</h4>
+      <p>These lookups return the values that can be used on one estimate, so they need the estimate’s <code>ObjectID</code> in an <code>EstimateREF</code> header:</p>
+      <ul class="checklist">
+        <li><svg class="ic"><use href="#i-check"/></svg><span><code>/Estimate/BidAs</code></span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span><code>/Estimate/EquipmentRateClass</code></span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span><code>/Estimate/EstimateType</code></span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span><code>/Estimate/EstimateStatus</code></span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span><code>/Estimate/JobCostID</code></span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span><code>/Estimate/LaborRateClass</code></span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span><code>/Estimate/MinorityType</code></span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span><code>/Estimate/UserDefinedField</code></span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span><code>/Estimate/WorkRule</code></span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span><code>…/Organization/{Type}/Category</code> for Competitor, Customer, EngineerArchitect, Manufacturer, Subcontractor, and Vendor</span></li>
+      </ul>
+      <div class="callout tip">
+        <svg class="ic"><use href="#i-bulb"/></svg>
+        <div><span class="callout-title">“The user is not authorized for this API.”</span><p>That is the 401 message B2WTechSupport returns when a data call has no valid credentials. Check the bearer token first, then the ClientID and ClientSecret if Client ID Security is on.</p></div>
+      </div>
+    </section>
+
+    <section class="q" id="est-postman" aria-labelledby="h-est-postman">
+      <div class="q-head"><span class="q-num">6</span><h3 id="h-est-postman">How do I set up the Estimate Postman collection?<a class="anchor" href="#est-postman" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Download the official EstAPI collection from the docs, import it into Postman, and fill in six collection variables. Its pre-request script logs in for you before every request, so you never copy a token by hand.</p>
+      </div>
+      <ol class="steps">
+        <li><div><span class="step-title">Download the collection</span>Open <a class="ext" href="https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport/Documentation/EstAPI.postman_collection.json" target="_blank" rel="noopener">EstAPI.postman_collection.json</a>, or use the link under <strong>Testing Guidelines</strong> in the docs. It has 281 requests.</div></li>
+        <li><div><span class="step-title">Import it</span>In Postman, press <kbd>Ctrl</kbd>+<kbd>O</kbd> and drop the file in. The <strong>EstAPI</strong> collection appears.</div></li>
+        <li><div><span class="step-title">Fill in the variables</span>Click the collection, open <strong>Variables</strong>, set the values below, and save.</div></li>
+        <li><div><span class="step-title">Send any request</span>Start with <strong>Ping</strong>, then any GET. The collection handles login and the extra headers.</div></li>
+      </ol>
+      <div class="table-wrap wide">
+        <table>
+          <thead><tr><th scope="col">Variable</th><th scope="col">What goes in it</th><th scope="col">Example</th></tr></thead>
+          <tbody>
+            <tr><td><code>BaseURL</code></td><td>The Estimate API URL (the file ships with <code>http://localhost/EstAPI</code>)</td><td class="wrap"><code>https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport</code></td></tr>
+            <tr><td><code>DatabaseName</code></td><td>The customer’s Estimate database</td><td><code>B2WSample</code> (placeholder)</td></tr>
+            <tr><td><code>UserName</code></td><td>Active Directory account, as <code>domain\username</code></td><td><code>DOMAIN\jsmith</code></td></tr>
+            <tr><td><code>Password</code></td><td>That account’s password</td><td>Your own value</td></tr>
+            <tr><td><code>ClientID</code> · <code>ClientSecret</code></td><td>Only when Client ID Security is on</td><td>Leave blank otherwise</td></tr>
+            <tr><td><code>Token</code></td><td>Set automatically by the pre-request script</td><td>Leave it</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout tip">
+        <svg class="ic"><use href="#i-bulb"/></svg>
+        <div><span class="callout-title">What the pre-request script does</span><p>Before each request it calls <code>{{BaseURL}}/login</code> with your user name and password, saves the AccessToken as the collection’s bearer token, and adds your <code>ClientID</code> and <code>ClientSecret</code> headers. Every request already sends <code>DatabaseName</code>.</p></div>
+      </div>
+    </section>
+
+    <div class="part" id="est-part-calls">
+      <span class="part-label">Part 3</span>
+      <h2>Make calls</h2>
+      <p>Read and filter estimate data, update records safely, and find the right endpoint.</p>
+    </div>
+
+    <section class="q" id="est-query" aria-labelledby="h-est-query">
+      <div class="q-head"><span class="q-num">7</span><h3 id="h-est-query">How do I read, filter, and page Estimate data?<a class="anchor" href="#est-query" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>GET returns an object whose <code>Items</code> array holds the records, up to 100 per call. Filter, sort, and page with the same OData options as the Ops API: <code>$filter</code>, <code>$select</code>, <code>$orderby</code>, <code>$top</code>, and <code>$skip</code>.</p>
+      </div>
+      <div class="tabs" data-tabgroup="client">
+        <div class="tablist" role="tablist" aria-label="Choose a tool">
+          <button type="button" role="tab" data-tab="postman" aria-selected="true">Postman</button>
+          <button type="button" role="tab" data-tab="powershell" aria-selected="false">PowerShell</button>
+          <button type="button" role="tab" data-tab="curl" aria-selected="false">cURL</button>
+          <button type="button" role="tab" data-tab="http" aria-selected="false">Raw HTTP</button>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="postman">
+          <span class="tab-label">Postman</span>
+          <div class="req">
+            <div class="req-line"><span class="m m-get">GET</span><code><span class="var">{{BaseURL}}</span>/Estimate?$top=5</code></div>
+            <div class="req-rows">
+              <p class="sec">Headers</p>
+              <p class="k">DatabaseName</p><p><span class="var">{{DatabaseName}}</span></p>
+              <p class="k">ClientID · ClientSecret</p><p>Added by the pre-request script</p>
+              <p class="sec">Authorization</p>
+              <p class="k">Bearer Token</p><p><span class="var">{{Token}}</span>, set by the pre-request script</p>
+            </div>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="powershell" hidden>
+          <span class="tab-label">PowerShell</span>
+          <div class="code">
+            <div class="code-head"><span>PowerShell · continues from question 4</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="powershell"><code>$headers = @{
+    Authorization = "Bearer $token"
+    DatabaseName  = "&lt;Estimate database name&gt;"
+    # ClientID     = "&lt;client ID&gt;"       # only when Client ID Security is on
+    # ClientSecret = "&lt;client secret&gt;"
+}
+
+# For GET, -Body becomes the query string: /Estimate?$top=5
+$result = Invoke-RestMethod -Uri "$baseUrl/Estimate" -Headers $headers -Body @{ '$top' = 5 }
+$result.Items | Select-Object Number, Name, EstimateStatus</code></pre>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="curl" hidden>
+          <span class="tab-label">cURL</span>
+          <div class="code">
+            <div class="code-head"><span>cURL · bash, macOS, Git Bash</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="bash"><code>curl -s -G 'https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport/Estimate' \
+  --data-urlencode '$top=5' \
+  -H 'Authorization: Bearer &lt;AccessToken&gt;' \
+  -H 'DatabaseName: &lt;Estimate database name&gt;'</code></pre>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="http" hidden>
+          <span class="tab-label">Raw HTTP</span>
+          <div class="code">
+            <div class="code-head"><span>HTTP request</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="http"><code>GET /EstAPI_B2WTechSupport/Estimate?$top=5 HTTP/1.1
+Host: b2w-eus10.b2w.trimble.com
+Authorization: Bearer &lt;AccessToken&gt;
+DatabaseName: &lt;Estimate database name&gt;</code></pre>
+          </div>
+        </div>
+      </div>
+      <div class="code">
+        <div class="code-head"><span>Response · 200 OK (shortened catalog example)</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="json"><code>{
+  "Items": [
+    {
+      "AntiTamperToken": "string",
+      "ObjectID": "32b66b04-0fdc-409f-8e10-aa6f5cf0fc6e",
+      "Number": "0006",
+      "Name": "Elm Street Bridge Improvements, Manchester",
+      "EstimateStatus": "Signed",
+      "EstimateType": "Public",
+      "BidAs": "General Contractor",
+      "BidDate": "2018-12-28T13:00:00",
+      "PrimaryCustomerName": "City Of Manchester",
+      "EstimatorName": "Paul Smith"
+    }
+  ]
+}</code></pre>
+      </div>
+      <h4>Filter examples</h4>
+      <div class="code">
+        <div class="code-head"><span>Postman URLs</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="url"><code># One estimate by number
+{{BaseURL}}/Estimate?$filter=Number eq '0006'
+
+# A few fields, sorted
+{{BaseURL}}/Estimate?$select=ObjectID,Number,Name&amp;$orderby=Number
+
+# From the official collection: GUIDs go without quotes
+{{BaseURL}}/Estimate/MinorityParticipationRequirement?$filter=EstimateREF eq 02E2BD02-B667-4478-A1C6-76DEDFB8958F</code></pre>
+      </div>
+      <div class="callout support">
+        <svg class="ic"><use href="#i-headset"/></svg>
+        <div><span class="callout-title">Exactly 100 records? Ask for the next page.</span><p>The page size is 100 by default. Add <code>$top=100&amp;$skip=100</code>, then <code>$skip=200</code>, until a page has fewer than 100 records.</p></div>
+      </div>
+    </section>
+
+    <section class="q" id="est-write" aria-labelledby="h-est-write">
+      <div class="q-head"><span class="q-num">8</span><h3 id="h-est-write">How do I create or update Estimate records?<a class="anchor" href="#est-write" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p><span class="m m-post">POST</span> creates and <span class="m m-put">PUT</span> updates. To update, GET the record, change only the fields you need, and PUT the entire record back with its <code>AntiTamperToken</code> unchanged.</p>
+      </div>
+      <h4>Why the AntiTamperToken matters</h4>
+      <p>Every GET returns an <code>AntiTamperToken</code>. A PUT must send it back with the same value. It protects properties that are returned for information only, such as <code>ObjectID</code>, from being changed. The docs also warn that a PUT with missing fields can delete values from the fields you left out, which is why you always send the whole record.</p>
+      <div class="code">
+        <div class="code-head"><span>PowerShell · get, change, put</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="powershell"><code># 1. GET the record you want to change
+$result   = Invoke-RestMethod -Uri "$baseUrl/Estimate" -Headers $headers -Body @{ '$filter' = "Number eq '0006'" }
+$estimate = $result.Items | Select-Object -First 1
+
+# 2. Change only what you need. Leave AntiTamperToken and ObjectID as they are.
+$estimate.BidLocation = "Manchester, NH"
+
+# 3. PUT the whole record back
+Invoke-RestMethod -Method Put -Uri "$baseUrl/Estimate" -Headers $headers -Body ($estimate | ConvertTo-Json -Depth 10) -ContentType "application/json"</code></pre>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">PUT returns</th><th scope="col">Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><span class="sc sc-2">200 OK</span></td><td>The record was updated.</td></tr>
+            <tr><td><span class="sc sc-4">400</span></td><td>The body doesn’t contain the record.</td></tr>
+            <tr><td><span class="sc sc-4">403</span></td><td>The operation is not allowed, for example one of the unsupported changes in question 1.</td></tr>
+            <tr><td><span class="sc sc-4">404</span></td><td>The record wasn’t found.</td></tr>
+            <tr><td><span class="sc sc-4">422</span></td><td>The body isn’t a valid record. Compare it with a fresh GET or with <code>/schema</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout danger">
+        <svg class="ic"><use href="#i-shield"/></svg>
+        <div><span class="callout-title">Practice in B2WTechSupport only</span><p>POST and PUT change real estimates. Never test them in a customer’s environment unless the customer has asked for the change.</p></div>
+      </div>
+    </section>
+
+    <section class="q" id="est-endpoints" aria-labelledby="h-est-endpoints">
+      <div class="q-head"><span class="q-num">9</span><h3 id="h-est-endpoints">Which endpoints are available?<a class="anchor" href="#est-endpoints" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>The B2WTechSupport catalog lists 227 operations. Most areas support GET, POST, and PUT plus a <code>/schema</code> call; some are read-only. Search below, then check Swagger for the fields.</p>
+      </div>
+      <div class="tool" data-explorer="est"></div>
+    </section>
+
+    <div class="part" id="est-part-troubleshoot">
+      <span class="part-label">Part 4</span>
+      <h2>Troubleshoot</h2>
+      <p>The basic tests from the Estimate API docs, and fixes for the errors you will see most.</p>
+    </div>
+
+    <section class="q" id="est-decode" aria-labelledby="h-est-decode">
+      <div class="q-head"><span class="q-num">10</span><h3 id="h-est-decode">What does this error mean?<a class="anchor" href="#est-decode" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Paste the error into the decoder: a status line, a response body, a Postman or PowerShell error, or the request URL. It names the likely cause and links to the fix.</p>
+      </div>
+      <div class="decoder-mount wide" data-decoder></div>
+      <p>It knows the Estimate API’s own messages, such as “The user is not authorized for this API.” and “Operation is not allowed”. It also reads SQL Server errors like “Login failed for user ‘NT AUTHORITY\NETWORK SERVICE’”, and checks pasted request headers for a missing <code>DatabaseName</code>, <code>EstimateREF</code>, or <code>Bearer</code>. Decoding runs entirely in your browser.</p>
+    </section>
+
+    <section class="q" id="est-troubleshoot" aria-labelledby="h-est-troubleshoot">
+      <div class="q-head"><span class="q-num">11</span><h3 id="h-est-troubleshoot">How do I troubleshoot the Estimate API?<a class="anchor" href="#est-troubleshoot" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Run the two basic tests in order: an app-up test with <code>/Ping/hello</code>, then a login test. Don’t go further until both pass. Then check the data call’s headers.</p>
+      </div>
+      <ol class="five">
+        <li><div><b>App-up test</b><p><code>GET /Ping/hello</code> should return 200 and <code>(server) hello|</code>. If it doesn’t, check that IIS is running, that the <strong>EstAPI</strong> application pool is running, and that the URL is correct. The environment checker in question 2 runs this test for you.</p></div></li>
+        <li><div><b>Login test</b><p><code>GET /Login</code> with <code>userName</code> and <code>password</code> headers should return 200 and an AccessToken. Any other code points at the account (question 4).</p></div></li>
+        <li><div><b>Data call headers</b><p>Check <code>Authorization: Bearer</code>, <code>DatabaseName</code>, the ClientID and ClientSecret if Client ID Security is on, and <code>EstimateREF</code> for estimate-specific lookups.</p></div></li>
+      </ol>
+      <h4>Common errors</h4>
+      <div class="errors">
+        <article class="err">
+          <div class="err-head"><span class="sc sc-4">400</span><h4>Login: “Both userName and password must be specified in the request header”</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>One or both headers are missing, or they were sent in the URL or body.</p></div>
+            <div><span class="lbl">Fix</span><p>Send both <code>userName</code> (DOMAIN\user) and <code>password</code> as headers.</p></div>
+          </div>
+        </article>
+        <article class="err">
+          <div class="err-head"><span class="sc sc-4">401</span><h4>Login: user is not authorized</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The domain controller rejected the account, or the account has no access to the Estimate data.</p></div>
+            <div><span class="lbl">Fix</span><p>Confirm the account name format and password, and that the user can access Estimate.</p></div>
+          </div>
+        </article>
+        <article class="err">
+          <div class="err-head"><span class="sc sc-4">401</span><h4>Data call: “The user is not authorized for this API.”</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The bearer token is missing, invalid, or expired, or the ClientID or ClientSecret is wrong when Client ID Security is on.</p></div>
+            <div><span class="lbl">Fix</span><p>Log in again for a fresh token and check the Authorization header. Then check the ClientID and ClientSecret headers.</p></div>
+          </div>
+        </article>
+        <article class="err">
+          <div class="err-head"><span class="sc">Wrong data</span><h4>Empty results, or data from the wrong company</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The <code>DatabaseName</code> header is missing or names the wrong database.</p></div>
+            <div><span class="lbl">Fix</span><p>Confirm the customer’s Estimate database name and resend.</p></div>
+          </div>
+        </article>
+        <article class="err">
+          <div class="err-head"><span class="sc sc-5">SQL</span><h4>“Login failed for user ‘NT AUTHORITY\NETWORK SERVICE’”</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The API runs as the Network Service account, which needs db_owner access to the Estimate database (the docs’ Post-Installation Step).</p></div>
+            <div><span class="lbl">Fix</span><p>On-premises: grant that access using the ConfigureDB commands. Cloud: escalate to the team that hosts the environment.</p></div>
+          </div>
+        </article>
+        <article class="err">
+          <div class="err-head"><span class="sc sc-4">403</span><h4>PUT: “Operation is not allowed”</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The change is one the API doesn’t support, such as cost structure, container components, or organizations in an estimate.</p></div>
+            <div><span class="lbl">Fix</span><p>Make that change in Estimate itself. There is no API route for it.</p></div>
+          </div>
+        </article>
+        <article class="err">
+          <div class="err-head"><span class="sc sc-4">422</span><h4>POST or PUT is rejected</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The body isn’t a valid record, or a PUT left out fields or changed the AntiTamperToken.</p></div>
+            <div><span class="lbl">Fix</span><p>GET the record again and PUT the whole record back with its AntiTamperToken unchanged.</p></div>
+          </div>
+        </article>
       </div>
     </section>
    </div>
 
    <!-- ##################################### MANAGEMENT REPORTING API VIEW -->
    <div class="product-view" data-view="mr">
-    <section class="hero soon-hero" aria-labelledby="mr-title">
-      <div class="soon-copy">
-        <p class="eyebrow">B2W Support Team · Management Reporting API</p>
-        <h1 id="mr-title">B2W Management Reporting API Help Guide</h1>
-        <p class="soon-badge">Coming soon</p>
-        <p class="lede">This guide is being written. It will cover the Management Reporting (MR) API the same way the Ops API guide does: finding the API, getting credentials, generating a token, making calls, and working tickets.</p>
-        <div class="hero-actions">
-          <button class="btn btn-primary" type="button" data-go="ops"><svg class="ic"><use href="#i-arrow"/></svg>Go to the Ops API guide</button>
-          <a class="btn ext" href="https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport/doc/index.html" target="_blank" rel="noopener"><svg class="ic"><use href="#i-book"/></svg>Open the MR API docs</a>
+    <section class="hero" aria-labelledby="mr-title">
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow">B2W Support Team · Management Reporting API</p>
+          <h1 id="mr-title">B2W Management Reporting API Help Guide</h1>
+          <p class="lede">How to reach a customer’s Management Reporting (MR) API, sign in, send the right headers, and pull report data from the Data Warehouse. Every example uses the <strong>B2WTechSupport</strong> environment.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary ext" href="https://www.postman.com/downloads/" target="_blank" rel="noopener"><svg class="ic"><use href="#i-download"/></svg>Download Postman</a>
+            <a class="btn ext" href="https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport/Documentation/MRAPI.postman_collection.json" target="_blank" rel="noopener"><svg class="ic"><use href="#i-folder"/></svg>Get the MR collection</a>
+            <a class="btn ext" href="https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport/doc/index.html" target="_blank" rel="noopener"><svg class="ic"><use href="#i-book"/></svg>Open the API docs</a>
+            <button class="btn" type="button" data-open-modal="checker"><svg class="ic"><use href="#i-signal"/></svg>Check an environment</button>
+            <button class="btn" type="button" data-open-modal="decoder"><svg class="ic"><use href="#i-decode"/></svg>Decode an error</button>
+          </div>
+        </div>
+        <aside class="env-card" aria-label="Example environment used in this guide">
+          <div class="env-head"><span class="live-dot" aria-hidden="true"></span>Example environment<span class="chip">Checked Oct 2, 2026</span></div>
+          <dl>
+            <dt>Environment</dt><dd><strong>B2WTechSupport</strong></dd>
+            <dt class="full">MR API URL</dt>
+            <dd class="full"><div class="copyline" style="margin:0"><code>https://b2w-eus10.b2w.trimble.com<wbr>/MRAPI_B2WTechSupport</code><button class="mini-btn" type="button" data-copy="https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport" aria-label="Copy the B2WTechSupport MR API URL"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div></dd>
+            <dt>API version</dt><dd><code>v2</code></dd>
+            <dt>Sign-in</dt><dd>Active Directory user name and password</dd>
+            <dt>Methods</dt><dd><span class="m m-sm m-get">GET</span> only · read-only</dd>
+          </dl>
+        </aside>
+      </div>
+      <nav class="paths" aria-label="Where to start">
+        <a class="path" href="#mr-login"><span class="path-icon"><svg class="ic"><use href="#i-key"/></svg></span><b>Get a bearer token <svg class="ic"><use href="#i-arrow"/></svg></b><span>Log in with an Active Directory account and get an AccessToken.</span></a>
+        <a class="path" href="#mr-headers"><span class="path-icon"><svg class="ic"><use href="#i-list"/></svg></span><b>Send the right headers <svg class="ic"><use href="#i-arrow"/></svg></b><span>DatabaseName for the Data Warehouse, and EstimateREF for estimate data.</span></a>
+        <a class="path" href="#mr-endpoints"><span class="path-icon"><svg class="ic"><use href="#i-search"/></svg></span><b>Find an endpoint <svg class="ic"><use href="#i-arrow"/></svg></b><span>Search all 106 read-only operations.</span></a>
+        <a class="path" href="#mr-troubleshoot"><span class="path-icon"><svg class="ic"><use href="#i-ticket"/></svg></span><b>Work a ticket <svg class="ic"><use href="#i-arrow"/></svg></b><span>App-up and login tests, plus fixes for common errors.</span></a>
+      </nav>
+    </section>
+
+    <div class="part" id="mr-part-basics">
+      <span class="part-label">Part 1</span>
+      <h2>Understand the basics</h2>
+      <p>What the MR API covers, where its data comes from, and where to find it.</p>
+    </div>
+
+    <section class="q" id="mr-what" aria-labelledby="h-mr-what">
+      <div class="q-head"><span class="q-num">1</span><h3 id="h-mr-what">What is the Management Reporting API?<a class="anchor" href="#mr-what" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>The MR API is a read-only REST API over the B2W Management Reporting Data Warehouse. It returns report data such as estimates, pay items, tasks, cost components, bid results, change orders, and vendor and subcontractor quotes. Every operation is a GET.</p>
+      </div>
+      <p>The B2WTechSupport catalog lists 42 functional areas and 106 operations: a data call and a <code>/schema</code> call for each area, plus Login and Ping.</p>
+      <div class="flow wide" role="img" aria-label="Estimate databases feed the Management Reporting Data Warehouse, which the MR API reads from.">
+        <div class="flow-node"><span class="lbl">Source</span><b>Estimate databases</b><p>Where estimators do their work.</p></div>
+        <div class="flow-arrow"><svg class="ic"><use href="#i-arrow"/></svg></div>
+        <div class="flow-node primary"><span class="lbl">Data Warehouse</span><b>Management Reporting</b><p>Loaded from the source databases.</p></div>
+        <div class="flow-arrow"><svg class="ic"><use href="#i-arrow"/></svg></div>
+        <div class="flow-node ok"><span class="lbl">MR API</span><b>Read-only report data</b><p>GET requests only.</p></div>
+      </div>
+      <div class="callout support">
+        <svg class="ic"><use href="#i-headset"/></svg>
+        <div><span class="callout-title">Report data, not live estimates</span><p>Records come from the Data Warehouse, not straight from Estimate. Each record shows where it came from (<code>SourceDatabaseName</code>) and when (<code>LastRetrievedFromSourceDatabaseOn</code>). If a customer says “the API shows old numbers”, check those fields first. To change data, use Estimate or the Estimate API.</p></div>
+      </div>
+    </section>
+
+    <section class="q" id="mr-url" aria-labelledby="h-mr-url">
+      <div class="q-head"><span class="q-num">2</span><h3 id="h-mr-url">How do I find a customer’s MR API URL?<a class="anchor" href="#mr-url" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Use the same formula with the <code>MRAPI_</code> prefix: <code>https://{cluster}/MRAPI_{environment}</code>. For B2WTechSupport, that is <code>https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport</code>.</p>
+      </div>
+      <div class="url-anatomy wide" role="img" aria-label="https:// then the cluster b2w-eus10.b2w.trimble.com, a slash, the MRAPI_ prefix, and the environment B2WTechSupport.">
+        <span class="seg seg-muted"><span>https://</span><small>&nbsp;</small></span>
+        <span class="seg seg-cluster"><span>b2w-eus10.b2w.trimble.com</span><small>Cluster (host)</small></span>
+        <span class="seg seg-muted"><span>/</span><small>&nbsp;</small></span>
+        <span class="seg seg-prefix"><span>MRAPI_</span><small>Prefix</small></span>
+        <span class="seg seg-env"><span>B2WTechSupport</span><small>Environment</small></span>
+      </div>
+      <p>In the Cloud Management Portal, the address is the <strong>MR API URL</strong>. It is listed under <strong>Estimate API Configuration</strong>, in the same row as the Estimate API:</p>
+      <figure class="shot wide">
+        <button class="frame" type="button" aria-label="Enlarge the Estimate API Configuration screenshot"><img src="images/portal_estimate_config.webp" width="1660" height="118" alt="Cloud Management Portal, Estimate API Configuration for B2WTechSupport: Est API URL and MR API URL https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport." decoding="async"><span class="zoom-hint"><svg class="ic"><use href="#i-zoom"/></svg>Enlarge</span></button>
+        <figcaption><b>Figure 1.</b> <b>②</b> The MR API URL, next to <b>①</b> the Est API URL.</figcaption>
+      </figure>
+      <h4>Check a customer’s environment</h4>
+      <div class="checker-mount wide" data-checker></div>
+    </section>
+
+    <section class="q" id="mr-docs" aria-labelledby="h-mr-docs">
+      <div class="q-head"><span class="q-num">3</span><h3 id="h-mr-docs">Where is the MR API documentation?<a class="anchor" href="#mr-docs" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Add <code>/doc/index.html</code> to the MR API URL. Like the Estimate API, it is a standard Swagger page with setup notes at the top and every functional area below.</p>
+      </div>
+      <div class="copyline"><code>https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport/doc/index.html</code><a class="mini-btn" href="https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport/doc/index.html" target="_blank" rel="noopener"><svg class="ic"><use href="#i-external"/></svg>Open</a><button class="mini-btn" type="button" data-copy="https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport/doc/index.html" aria-label="Copy the MR API docs URL"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+      <figure class="shot">
+        <button class="frame" type="button" aria-label="Enlarge the MR API docs screenshot"><img src="images/mr_docs_overview.webp" width="1920" height="1005" alt="The B2W Management Reporting API v2 Swagger page with collapsible setup and guideline sections, then functional areas starting with BidResultsCompetitor." decoding="async"><span class="zoom-hint"><svg class="ic"><use href="#i-zoom"/></svg>Enlarge</span></button>
+        <figcaption><b>Figure 2.</b> <b>①</b> Usage Guidelines covers login and Client ID Security. <b>②</b> Testing Guidelines links the official Postman collection. <b>③</b> Functional areas, each read from the Data Warehouse.</figcaption>
+      </figure>
+      <p>The machine-readable catalog is at <code>/doc/v2/MRAPI.json</code>.</p>
+    </section>
+
+    <div class="part" id="mr-part-signin">
+      <span class="part-label">Part 2</span>
+      <h2>Sign in</h2>
+      <p>Get a token, then send it with the headers every MR call needs.</p>
+    </div>
+
+    <section class="q" id="mr-login" aria-labelledby="h-mr-login">
+      <div class="q-head"><span class="q-num">4</span><h3 id="h-mr-login">How do I log in and get a Bearer Token?<a class="anchor" href="#mr-login" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Exactly like the Estimate API: send <code>GET {baseUrl}/Login</code> with <code>userName</code> (DOMAIN\user) and <code>password</code> headers for an Active Directory account with access to Management Reporting. The <code>AccessToken</code> in the response is your bearer token.</p>
+      </div>
+      <div class="tabs" data-tabgroup="client">
+        <div class="tablist" role="tablist" aria-label="Choose a tool">
+          <button type="button" role="tab" data-tab="postman" aria-selected="true">Postman</button>
+          <button type="button" role="tab" data-tab="powershell" aria-selected="false">PowerShell</button>
+          <button type="button" role="tab" data-tab="curl" aria-selected="false">cURL</button>
+          <button type="button" role="tab" data-tab="http" aria-selected="false">Raw HTTP</button>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="postman">
+          <span class="tab-label">Postman</span>
+          <div class="req">
+            <div class="req-line"><span class="m m-get">GET</span><code><span class="var">{{BaseURL}}</span>/Login</code></div>
+            <div class="req-rows">
+              <p class="sec">Headers</p>
+              <p class="k">userName</p><p><span class="var">{{UserName}}</span> (DOMAIN\user)</p>
+              <p class="k">password</p><p><span class="var">{{Password}}</span></p>
+            </div>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="powershell" hidden>
+          <span class="tab-label">PowerShell</span>
+          <div class="code">
+            <div class="code-head"><span>PowerShell</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="powershell"><code>$baseUrl = "https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport"
+
+$login = Invoke-RestMethod -Method Get -Uri "$baseUrl/Login" -Headers @{
+    userName = "DOMAIN\jsmith"
+    password = "&lt;password&gt;"
+}
+
+$token = $login.AccessToken</code></pre>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="curl" hidden>
+          <span class="tab-label">cURL</span>
+          <div class="code">
+            <div class="code-head"><span>cURL · bash, macOS, Git Bash</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="bash"><code>curl -s 'https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport/Login' \
+  -H 'userName: DOMAIN\jsmith' \
+  -H 'password: &lt;password&gt;'</code></pre>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="http" hidden>
+          <span class="tab-label">Raw HTTP</span>
+          <div class="code">
+            <div class="code-head"><span>HTTP request</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="http"><code>GET /MRAPI_B2WTechSupport/Login HTTP/1.1
+Host: b2w-eus10.b2w.trimble.com
+userName: DOMAIN\jsmith
+password: &lt;password&gt;</code></pre>
+          </div>
         </div>
       </div>
-      <div class="soon-grid">
-        <div class="soon-card">
-          <h2>Already confirmed for B2WTechSupport</h2>
-          <dl class="facts">
-            <div><dt>API address</dt><dd><div class="copyline"><code>https://b2w-eus10.b2w.trimble.com<wbr>/MRAPI_B2WTechSupport</code><button class="mini-btn" type="button" data-copy="https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport" aria-label="Copy the Management Reporting API address"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>Same pattern as the Ops API, with the <code>MRAPI_</code> prefix.</dd></div>
-            <div><dt>API docs</dt><dd>Add <code>/doc/index.html</code> to the address, just like the Ops API.</dd></div>
-            <div><dt>Connectivity check</dt><dd><code>/Ping/hello</code> answers without a login: <code>(b2w-eus10-iis2) hello|</code></dd></div>
-            <div><dt>Where it is listed</dt><dd>The Cloud Management Portal shows the <strong>MR API URL</strong> in the Estimate API Configuration panel, next to the Est API Secret.</dd></div>
-          </dl>
+      <p>The responses match the Estimate API: <span class="sc sc-2">200</span> with the AccessToken, <span class="sc sc-4">400</span> when a header is missing (B2WTechSupport answers <code>"Both userName and password must be specified in the request header"</code>), <span class="sc sc-4">401</span> when the user is not authorized, and <span class="sc sc-5">500</span> for server errors.</p>
+    </section>
+
+    <section class="q" id="mr-headers" aria-labelledby="h-mr-headers">
+      <div class="q-head"><span class="q-num">5</span><h3 id="h-mr-headers">Which headers does every call need?<a class="anchor" href="#mr-headers" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Every data call needs <code>Authorization: Bearer &lt;AccessToken&gt;</code> and a <code>DatabaseName</code> header naming the Data Warehouse database. Add <code>ClientID</code> and <code>ClientSecret</code> when Client ID Security is on, and <code>EstimateREF</code> on the eight calls that return one estimate’s items.</p>
+      </div>
+      <div class="table-wrap wide">
+        <table>
+          <thead><tr><th scope="col">Header</th><th scope="col">When</th><th scope="col">Value</th></tr></thead>
+          <tbody>
+            <tr><td><code>Authorization</code></td><td>Every data call</td><td><code>Bearer &lt;AccessToken&gt;</code> from Login</td></tr>
+            <tr><td><code>DatabaseName</code></td><td>Every data call</td><td>The Management Reporting Data Warehouse database. The official collection’s placeholder is <code>B2WDataWarehouse</code>.</td></tr>
+            <tr><td><code>ClientID</code> · <code>ClientSecret</code></td><td>When Client ID Security is on</td><td>The values set in the API; a mismatch returns 401</td></tr>
+            <tr><td><code>EstimateREF</code></td><td>The eight estimate-specific calls below</td><td>The <code>ObjectID</code> of the estimate</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h4>Calls that need EstimateREF</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">For one estimate (send EstimateREF)</th><th scope="col">Across all estimates (no EstimateREF)</th></tr></thead>
+          <tbody>
+            <tr><td><code>/Estimate/PayItem</code> · <code>/Estimate/PayItemDetail</code></td><td><code>/Estimate/PayItemAll</code></td></tr>
+            <tr><td><code>/Estimate/IndirectItem</code> · <code>/Estimate/IndirectItemDetail</code></td><td><code>/Estimate/IndirectItemAll</code></td></tr>
+            <tr><td><code>/Estimate/Task</code> · <code>/Estimate/TaskDetail</code></td><td><code>/Estimate/TaskAll</code></td></tr>
+            <tr><td><code>/Estimate/WBSLevel</code> · <code>/Estimate/WBSLevelDetail</code></td><td><code>/Estimate/WBSLevelAll</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The <code>Detail</code> versions return the same items with full information. Get an estimate’s <code>ObjectID</code> from <code>GET /Estimate</code> first.</p>
+      <div class="callout note">
+        <svg class="ic"><use href="#i-info"/></svg>
+        <div><span class="callout-title">Cloud environments</span><p>The Cloud Management Portal lists the MR API URL next to the <strong>Est API Secret</strong>. Confirm with the team which client values a customer’s MR API expects, and treat them as credentials.</p></div>
+      </div>
+    </section>
+
+    <section class="q" id="mr-postman" aria-labelledby="h-mr-postman">
+      <div class="q-head"><span class="q-num">6</span><h3 id="h-mr-postman">How do I set up the MR Postman collection?<a class="anchor" href="#mr-postman" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Download the official MRAPI collection from the docs, import it, and fill in its variables. Like the Estimate collection, its pre-request script logs in for you before every request.</p>
+      </div>
+      <ol class="steps">
+        <li><div><span class="step-title">Download the collection</span>Open <a class="ext" href="https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport/Documentation/MRAPI.postman_collection.json" target="_blank" rel="noopener">MRAPI.postman_collection.json</a>, or use the link under <strong>Testing Guidelines</strong> in the docs. It has 107 requests.</div></li>
+        <li><div><span class="step-title">Import it</span>Press <kbd>Ctrl</kbd>+<kbd>O</kbd> in Postman and drop the file in.</div></li>
+        <li><div><span class="step-title">Fill in the variables</span>Set the values below on the collection’s <strong>Variables</strong> tab and save.</div></li>
+      </ol>
+      <div class="table-wrap wide">
+        <table>
+          <thead><tr><th scope="col">Variable</th><th scope="col">What goes in it</th><th scope="col">Example</th></tr></thead>
+          <tbody>
+            <tr><td><code>BaseURL</code></td><td>The MR API URL (the file ships with <code>http://localhost/MRAPI</code>)</td><td class="wrap"><code>https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport</code></td></tr>
+            <tr><td><code>DatabaseName</code></td><td>The Data Warehouse database</td><td><code>B2WDataWarehouse</code> (placeholder)</td></tr>
+            <tr><td><code>UserName</code> · <code>Password</code></td><td>Active Directory account, as <code>domain\username</code></td><td>Your own values</td></tr>
+            <tr><td><code>ClientID</code> · <code>ClientSecret</code></td><td>Only when Client ID Security is on</td><td>Leave blank otherwise</td></tr>
+            <tr><td><code>EstimateREF</code></td><td>An estimate’s ObjectID, for the estimate-specific requests</td><td class="wrap"><code>DA45D31C-05FC-4C64-B1C8-8CE3E8E69D23</code> (sample)</td></tr>
+            <tr><td><code>Token</code></td><td>Set automatically by the pre-request script</td><td>Leave it</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="part" id="mr-part-calls">
+      <span class="part-label">Part 3</span>
+      <h2>Make calls</h2>
+      <p>Pull report data, page through it, and find the right endpoint.</p>
+    </div>
+
+    <section class="q" id="mr-query" aria-labelledby="h-mr-query">
+      <div class="q-head"><span class="q-num">7</span><h3 id="h-mr-query">How do I read, filter, and page report data?<a class="anchor" href="#mr-query" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Every GET returns an <code>Items</code> array and a <code>Pagination</code> block that tells you how many records exist. Use OData to filter and page; <code>contains()</code> works for text searches.</p>
+      </div>
+      <div class="tabs" data-tabgroup="client">
+        <div class="tablist" role="tablist" aria-label="Choose a tool">
+          <button type="button" role="tab" data-tab="postman" aria-selected="true">Postman</button>
+          <button type="button" role="tab" data-tab="powershell" aria-selected="false">PowerShell</button>
+          <button type="button" role="tab" data-tab="curl" aria-selected="false">cURL</button>
+          <button type="button" role="tab" data-tab="http" aria-selected="false">Raw HTTP</button>
         </div>
-        <div class="soon-card">
-          <h2>API guides</h2>
-          <ul class="status-list">
-            <li><span class="nm"><span class="sw sw-ops" aria-hidden="true"></span>Ops API</span><button class="chip chip-ok chip-btn" type="button" data-go="ops">Available</button></li>
-            <li><span class="nm"><span class="sw sw-est" aria-hidden="true"></span>Estimate API</span><span class="chip">Coming soon</span></li>
-            <li aria-current="true"><span class="nm"><span class="sw sw-mr" aria-hidden="true"></span>Management Reporting API</span><span class="chip">Coming soon</span></li>
-          </ul>
+        <div class="tabpanel" role="tabpanel" data-panel="postman">
+          <span class="tab-label">Postman</span>
+          <div class="req">
+            <div class="req-line"><span class="m m-get">GET</span><code><span class="var">{{BaseURL}}</span>/Estimate/PayItem?$filter=contains(Description, 'Mobilization')</code></div>
+            <div class="req-rows">
+              <p class="sec">Headers</p>
+              <p class="k">DatabaseName</p><p><span class="var">{{DatabaseName}}</span></p>
+              <p class="k">EstimateREF</p><p><span class="var">{{EstimateREF}}</span></p>
+              <p class="sec">Authorization</p>
+              <p class="k">Bearer Token</p><p><span class="var">{{Token}}</span>, set by the pre-request script</p>
+            </div>
+          </div>
         </div>
+        <div class="tabpanel" role="tabpanel" data-panel="powershell" hidden>
+          <span class="tab-label">PowerShell</span>
+          <div class="code">
+            <div class="code-head"><span>PowerShell · continues from question 4</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="powershell"><code>$headers = @{
+    Authorization = "Bearer $token"
+    DatabaseName  = "&lt;Data Warehouse database name&gt;"
+    EstimateREF   = "&lt;ObjectID of the estimate&gt;"
+}
+
+$result = Invoke-RestMethod -Uri "$baseUrl/Estimate/PayItem" -Headers $headers -Body @{ '$filter' = "contains(Description, 'Mobilization')" }
+$result.Items
+$result.Pagination   # CurrentPage, ItemsOnPage, PageSize, TotalItems</code></pre>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="curl" hidden>
+          <span class="tab-label">cURL</span>
+          <div class="code">
+            <div class="code-head"><span>cURL · bash, macOS, Git Bash</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="bash"><code>curl -s -G 'https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport/Estimate/PayItem' \
+  --data-urlencode "\$filter=contains(Description, 'Mobilization')" \
+  -H 'Authorization: Bearer &lt;AccessToken&gt;' \
+  -H 'DatabaseName: &lt;Data Warehouse database name&gt;' \
+  -H 'EstimateREF: &lt;ObjectID of the estimate&gt;'</code></pre>
+          </div>
+        </div>
+        <div class="tabpanel" role="tabpanel" data-panel="http" hidden>
+          <span class="tab-label">Raw HTTP</span>
+          <div class="code">
+            <div class="code-head"><span>HTTP request</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="http"><code>GET /MRAPI_B2WTechSupport/Estimate/PayItem?$filter=contains(Description, 'Mobilization') HTTP/1.1
+Host: b2w-eus10.b2w.trimble.com
+Authorization: Bearer &lt;AccessToken&gt;
+DatabaseName: &lt;Data Warehouse database name&gt;
+EstimateREF: &lt;ObjectID of the estimate&gt;</code></pre>
+          </div>
+        </div>
+      </div>
+      <div class="code">
+        <div class="code-head"><span>Response · GET /Estimate (shortened catalog example)</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+<pre data-lang="json"><code>{
+  "Items": [
+    {
+      "Title": "Fox Hill Development",
+      "ObjectID": "02e2bd02-b667-4478-a1c6-76dedfb8958f",
+      "EstimateNumber": "0012",
+      "BidNumber": "64687",
+      "EstimateStatus": "Pending",
+      "SourceDatabaseName": "B2WSample",
+      "LastRetrievedFromSourceDatabaseOn": "2025-12-07T23:40:17.823",
+      "TotalBidPriceWithTax": 12627661.59
+    }
+  ],
+  "Pagination": {
+    "CurrentPage": "…/Estimate?$orderBy=Title&amp;$skip=0&amp;$top=5",
+    "ItemsOnPage": 1,
+    "PageSize": 5,
+    "TotalItems": 1
+  }
+}</code></pre>
+      </div>
+      <div class="callout support">
+        <svg class="ic"><use href="#i-headset"/></svg>
+        <div><span class="callout-title">Use TotalItems to page</span><p><code>Pagination.TotalItems</code> tells you how many records match. Keep adding <code>$skip</code> in steps of your <code>$top</code> (100 at most) until you have them all.</p></div>
+      </div>
+    </section>
+
+    <section class="q" id="mr-endpoints" aria-labelledby="h-mr-endpoints">
+      <div class="q-head"><span class="q-num">8</span><h3 id="h-mr-endpoints">Which endpoints are available?<a class="anchor" href="#mr-endpoints" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>The B2WTechSupport catalog lists 106 operations, all GET. Each area has a data call and a <code>/schema</code> call. Search below, then check Swagger for the fields.</p>
+      </div>
+      <div class="tool" data-explorer="mr"></div>
+    </section>
+
+    <div class="part" id="mr-part-troubleshoot">
+      <span class="part-label">Part 4</span>
+      <h2>Troubleshoot</h2>
+      <p>The basic tests from the MR API docs, and fixes for the errors you will see most.</p>
+    </div>
+
+    <section class="q" id="mr-decode" aria-labelledby="h-mr-decode">
+      <div class="q-head"><span class="q-num">9</span><h3 id="h-mr-decode">What does this error mean?<a class="anchor" href="#mr-decode" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Paste the error into the decoder: a status line, a response body, a Postman or PowerShell error, or the request URL. It names the likely cause and links to the fix.</p>
+      </div>
+      <div class="decoder-mount wide" data-decoder></div>
+      <p>It knows the MR API’s messages and SQL Server errors such as “Login failed for user ‘NT AUTHORITY\NETWORK SERVICE’”. Paste a successful response and it reads the <code>Pagination</code> block and <code>LastRetrievedFromSourceDatabaseOn</code> too, which answers “why is data missing?” and “why are the numbers old?”. Decoding runs entirely in your browser.</p>
+    </section>
+
+    <section class="q" id="mr-troubleshoot" aria-labelledby="h-mr-troubleshoot">
+      <div class="q-head"><span class="q-num">10</span><h3 id="h-mr-troubleshoot">How do I troubleshoot the MR API?<a class="anchor" href="#mr-troubleshoot" aria-label="Link to this question">#</a></h3></div>
+      <div class="answer">
+        <span class="answer-label">Short answer</span>
+        <p>Run the app-up test with <code>/Ping/hello</code>, then the login test. Don’t go further until both pass. Then check the headers, especially <code>DatabaseName</code> and <code>EstimateREF</code>.</p>
+      </div>
+      <ol class="five">
+        <li><div><b>App-up test</b><p><code>GET /Ping/hello</code> should return 200 and <code>(server) hello|</code>. If not, check that IIS and the <strong>MRAPI</strong> application pool are running and that the URL is correct. The environment checker in question 2 runs this for you.</p></div></li>
+        <li><div><b>Login test</b><p><code>GET /Login</code> with <code>userName</code> and <code>password</code> headers should return an AccessToken.</p></div></li>
+        <li><div><b>Data call headers</b><p>Check <code>Authorization: Bearer</code>, <code>DatabaseName</code>, the client values if Client ID Security is on, and <code>EstimateREF</code> on estimate-specific calls.</p></div></li>
+      </ol>
+      <h4>Common errors</h4>
+      <div class="errors">
+        <article class="err">
+          <div class="err-head"><span class="sc sc-4">401</span><h4>Data call: “The user is not authorized for this API.”</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The bearer token is missing, invalid, or expired, or the ClientID or ClientSecret is wrong when Client ID Security is on.</p></div>
+            <div><span class="lbl">Fix</span><p>Log in again for a fresh token, then check the client headers.</p></div>
+          </div>
+        </article>
+        <article class="err">
+          <div class="err-head"><span class="sc">Wrong data</span><h4>Empty results or the wrong company’s data</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The <code>DatabaseName</code> header is missing or names the wrong Data Warehouse database.</p></div>
+            <div><span class="lbl">Fix</span><p>Confirm the Data Warehouse database name and resend.</p></div>
+          </div>
+        </article>
+        <article class="err">
+          <div class="err-head"><span class="sc">No items</span><h4>Pay items, tasks, or WBS levels come back empty</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The <code>EstimateREF</code> header is missing or isn’t an estimate in this Data Warehouse.</p></div>
+            <div><span class="lbl">Fix</span><p>Get the estimate’s ObjectID from <code>GET /Estimate</code>, or use the <code>…All</code> version of the call.</p></div>
+          </div>
+        </article>
+        <article class="err">
+          <div class="err-head"><span class="sc">Old data</span><h4>“The API shows old numbers”</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The Data Warehouse hasn’t been reloaded from the source Estimate database since the change.</p></div>
+            <div><span class="lbl">Fix</span><p>Check <code>LastRetrievedFromSourceDatabaseOn</code> on the record, and the Data Warehouse load for that source database.</p></div>
+          </div>
+        </article>
+        <article class="err">
+          <div class="err-head"><span class="sc sc-5">SQL</span><h4>“Login failed for user ‘NT AUTHORITY\NETWORK SERVICE’”</h4></div>
+          <div class="err-body">
+            <div><span class="lbl">Likely cause</span><p>The API’s Network Service account lacks db_owner access to the Data Warehouse database, or the API’s SQL Server connection string is wrong.</p></div>
+            <div><span class="lbl">Fix</span><p>On-premises: grant the access and verify the connection string (the docs’ Post-Installation Step). Cloud: escalate to the hosting team.</p></div>
+          </div>
+        </article>
       </div>
     </section>
    </div>
@@ -1670,10 +2579,31 @@ Authorization: Bearer &lt;AccessToken&gt;</code></pre>
 
 <footer class="site-foot">
   <div class="brandline"><img src="images/logo_mark_blue.png" alt="" width="22" height="24"><span id="foot-name">B2W Ops API Help Guide</span></div>
-  <p>Built for the B2W Support Team. The Ops API guide comes from the Ops API Support Training and its walkthrough notes. Endpoint lists, sample responses, and live results come from the B2WTechSupport environment, checked October 2, 2026. Credentials and tokens in screenshots are hidden.</p>
+  <p>Built for the B2W Support Team. The Ops API guide comes from the Ops API Support Training and its walkthrough notes; the Estimate and Management Reporting guides come from their API documentation and official Postman collections. Endpoint lists, sample responses, and live results come from the B2WTechSupport environment, checked October 2, 2026. Credentials and tokens in screenshots are hidden.</p>
+  <a class="foot-gh" href="https://github.com/GetBirned" target="_blank" rel="noopener"><svg class="ic ic-fill" aria-hidden="true"><use href="#i-github"/></svg>GetBirned on GitHub</a>
 </footer>
 
 <button class="to-top no-print" id="to-top" type="button" aria-label="Back to top" hidden><svg class="ic"><use href="#i-up"/></svg></button>
+
+<div class="modal" id="checker-modal" role="dialog" aria-modal="true" aria-labelledby="checker-modal-title" hidden>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="checker-modal-title">Check an environment</h2>
+      <button class="icon-btn modal-close" type="button" data-close-modal aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="checker-mount" data-checker data-autofocus></div>
+  </div>
+</div>
+
+<div class="modal" id="decoder-modal" role="dialog" aria-modal="true" aria-labelledby="decoder-modal-title" hidden>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="decoder-modal-title">Decode an error</h2>
+      <button class="icon-btn modal-close" type="button" data-close-modal aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="decoder-mount" data-decoder></div>
+  </div>
+</div>
 
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged screenshot" hidden>
   <button class="close" type="button" id="lightbox-close" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>

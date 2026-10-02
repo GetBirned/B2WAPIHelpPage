@@ -1,36 +1,53 @@
 # B2W API Help Guide
 
-A help guide for the B2W Support Team covering the B2W cloud APIs. The header switch moves between three APIs, each with its own color scheme:
+A help guide for the B2W Support Team covering the three B2W cloud APIs. The switch in the header moves between them, and each has its own color scheme:
 
-| API | Status | Color |
-|---|---|---|
-| Ops API | Complete guide | Trimble Blue |
-| Estimate API | Coming soon | Green |
-| Management Reporting API | Coming soon | Violet |
+| API | Address prefix | Color | Guide |
+|---|---|---|---|
+| Ops API | `OpsAPI_` | Trimble Blue | 21 questions plus reference sections (security, FAQ, quiz, cheat sheet, glossary) |
+| Estimate API | `EstAPI_` | Green | 11 questions |
+| Management Reporting API | `MRAPI_` | Violet | 10 questions |
 
-The Ops API guide answers questions such as "How do I generate a Bearer Token?" and "How do I find my clientID and clientSecret?" with step-by-step walkthroughs, annotated screenshots, Postman, PowerShell, and cURL examples, a ticket troubleshooter, an endpoint explorer, and a knowledge check. Examples use the **B2WTechSupport** environment.
+Each guide answers questions such as "How do I generate a Bearer Token?" with step-by-step walkthroughs, annotated screenshots, and Postman, PowerShell, cURL, and raw HTTP examples. Examples use the **B2WTechSupport** environment.
+
+### Environment checker
+
+Paste a customer's Ops address (for example `https://b2w-eus10.b2w.trimble.com/B2WTechSupport`) and the checker builds copyable addresses for all three APIs, then sends a sample `GET /Ping/hello` to each and reports **Up**, **Not found** (wrong environment name), or **No response** (site, IIS, or network down). It is in each guide's "find the URL" question and in the header (the signal icon).
+
+Browsers can't read replies from another site, and these APIs send no CORS headers, so the checker pairs the ping with a load of each API's Swagger icon (`/doc/favicon-16x16.png`), which only succeeds when that API is serving the environment. It also generates a PowerShell command that shows the raw replies.
+
+### Error decoder
+
+Paste anything a customer sends (a status line, a JSON or XML error body, a Postman or PowerShell error, request headers, or the request URL) and the decoder works out the API, status code, call, endpoint, and environment, then names the likely cause and links to the fix. It knows each API's own messages (for example the Ops 403 `InternalMessage` that names the missing privilege, `ApiEmployee.Read`, and the Estimate/MR "The user is not authorized for this API."), SQL Server login errors, IIS and network failures, and checks pasted paths against the endpoint catalogs and pasted headers for a missing `Bearer`, `DatabaseName`, or `EstimateREF`. Results include a one-click environment check and a plain-text summary to paste into the ticket.
+
+It is the "What does this error mean?" question in each guide's troubleshooting part and in the header (the `{!}` icon). Decoding runs entirely in the browser: nothing pasted is sent or stored. Rules live in `app.js` (`DEC_RULES`).
 
 ## Use it
 
-Open `dist/B2W-API-Help-Guide.html` in any browser. It is one self-contained file (styles, scripts, and screenshots are embedded), so it can be shared as-is. `dist/B2W-API-Help-Guide.pdf` is the printable version of the Ops API guide.
+Open `dist/B2W-API-Help-Guide.html` in any browser. It is one self-contained file (styles, scripts, and screenshots are embedded), so it can be shared as-is. Printable versions:
 
-Links that open a specific guide directly:
+- `dist/B2W-Ops-API-Guide.pdf`
+- `dist/B2W-Estimate-API-Guide.pdf`
+- `dist/B2W-Management-Reporting-API-Guide.pdf`
 
-- `B2W-API-Help-Guide.html#estimate-api`
-- `B2W-API-Help-Guide.html#reporting-api`
-- Any Ops API question, for example `B2W-API-Help-Guide.html#bearer-token`
+Links that open a specific guide or question directly:
+
+- `B2W-API-Help-Guide.html#estimate-api` and `#reporting-api`
+- Any question: `#bearer-token` (Ops), `#est-login` (Estimate), `#mr-headers` (Management Reporting)
 
 ## Edit it
 
 ```
 src/
-  index.html     page content; each API is a <div class="product-view" data-view="ops|est|mr">
+  index.html     page content; each API is a <div class="product-view" data-view="ops|est|mr">,
+                 and each has its own sidebar list in <div class="toc-product" data-for="…">
   styles.css     design tokens at the top, including the per-API color schemes
-  app.js         switcher, search, tabs, troubleshooter, endpoint explorer, quiz
+  app.js         switcher, search, tabs, environment checker, error decoder, endpoint explorers,
+                 troubleshooter, quiz
   images/        redacted, annotated screenshots (WebP) and logo marks
 build.py         bundles src/ into dist/B2W-API-Help-Guide.html
 tools/
-  export-pdf.js  prints dist/ to PDF with headless Chrome or Edge
+  export-pdf.js  prints each guide to its own PDF with headless Chrome or Edge
 source-material/ (not in git) original notes, slides, and raw screenshots
 ```
 
@@ -45,9 +62,13 @@ node tools/export-pdf.js
 
 To preview while editing, open `src/index.html` directly, or serve `dist/` with `python -m http.server 8765 --directory dist` and visit http://localhost:8765/B2W-API-Help-Guide.html.
 
-### Adding the Estimate or Management Reporting guide
+Question IDs in the Estimate guide start with `est-` and in the Management Reporting guide with `mr-`; the page uses those prefixes to open the right guide from a link. Endpoint lists for the explorers live in `app.js` (`OPS_EP`, `EST_EP`, `MR_EP`).
 
-Replace the coming-soon content inside `data-view="est"` or `data-view="mr"` in `src/index.html`, using the Ops API sections as the pattern. Then remove the `Soon` tag from that API's button in the header switch and update its status in the "API guides" lists.
+## Sources
+
+- **Ops API:** the Ops API Support Training (slides and walkthrough notes) and the B2WTechSupport API catalog.
+- **Estimate and Management Reporting APIs:** their B2WTechSupport API documentation (`/doc/index.html`, `/doc/v1/EstAPI.json`, `/doc/v2/MRAPI.json`) and the official Postman collections linked from it.
+- Live responses (ping, login errors, version) were checked against B2WTechSupport on October 2, 2026.
 
 ## Screenshots and secrets
 

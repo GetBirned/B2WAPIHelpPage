@@ -1,4 +1,4 @@
-// Export dist/B2W-API-Help-Guide.html to dist/B2W-API-Help-Guide.pdf (US Letter)
+// Print each API guide in dist/B2W-API-Help-Guide.html to its own PDF (US Letter)
 // using headless Chrome or Edge over the DevTools Protocol.
 // Requires Node 22+ (global WebSocket). No npm packages.
 //
@@ -14,7 +14,11 @@ const { pathToFileURL } = require('url');
 
 const ROOT = path.resolve(__dirname, '..');
 const HTML = path.join(ROOT, 'dist', 'B2W-API-Help-Guide.html');
-const PDF = path.join(ROOT, 'dist', 'B2W-API-Help-Guide.pdf');
+const GUIDES = [
+  { hash: '', pdf: 'B2W-Ops-API-Guide.pdf' },
+  { hash: '#estimate-api', pdf: 'B2W-Estimate-API-Guide.pdf' },
+  { hash: '#reporting-api', pdf: 'B2W-Management-Reporting-API-Guide.pdf' },
+];
 const PORT = 9333;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -84,17 +88,21 @@ async function main() {
 
     await send('Page.enable');
     await send('Emulation.setEmulatedMedia', { media: 'print', features: [{ name: 'prefers-color-scheme', value: 'light' }] });
-    const loaded = new Promise((r) => { onLoad = r; });
-    await send('Page.navigate', { url: pathToFileURL(HTML).href });
-    await Promise.race([loaded, sleep(15000)]);
-    await sleep(1500); // web fonts and images
-    await send('Runtime.evaluate', { expression: "document.querySelectorAll('details').forEach(d => d.open = true)" });
-
-    const { data } = await send('Page.printToPDF', {
-      paperWidth: 8.5, paperHeight: 11, printBackground: true, preferCSSPageSize: true,
-    });
-    fs.writeFileSync(PDF, Buffer.from(data, 'base64'));
-    console.log(`Wrote ${path.relative(ROOT, PDF)} (${Math.round(fs.statSync(PDF).size / 1024).toLocaleString()} KB)`);
+    for (const guide of GUIDES) {
+      await send('Page.navigate', { url: 'about:blank' });
+      await sleep(250);
+      const loaded = new Promise((r) => { onLoad = r; });
+      await send('Page.navigate', { url: pathToFileURL(HTML).href + guide.hash });
+      await Promise.race([loaded, sleep(15000)]);
+      await sleep(1500); // web fonts and images
+      await send('Runtime.evaluate', { expression: "document.querySelectorAll('details').forEach(d => d.open = true)" });
+      const { data } = await send('Page.printToPDF', {
+        paperWidth: 8.5, paperHeight: 11, printBackground: true, preferCSSPageSize: true,
+      });
+      const out = path.join(ROOT, 'dist', guide.pdf);
+      fs.writeFileSync(out, Buffer.from(data, 'base64'));
+      console.log(`Wrote ${path.relative(ROOT, out)} (${Math.round(fs.statSync(out).size / 1024).toLocaleString()} KB)`);
+    }
     ws.close();
   } finally {
     browser.kill();
