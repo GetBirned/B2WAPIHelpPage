@@ -1,0 +1,13 @@
+# Raw training material. The original notes, slides, and screenshots contain
+# unmasked tokens, secrets, and client IDs. Keep them local; never commit them.
+source-material/
+
+# OS and editor files
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Tooling
+__pycache__/
+*.pyc
+node_modules/
