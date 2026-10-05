@@ -548,6 +548,8 @@
   }
   function closeModal(restoreFocus) {
     if (!openDialog) return;
+    // A pasted token never outlives the dialog it was pasted into.
+    if (openDialog.id === 'token-modal' && tokenTool) tokenTool.clear();
     openDialog.hidden = true;
     openDialog = null;
     document.body.style.overflow = '';
@@ -1095,7 +1097,7 @@
     c.said = [];
     var seen = {}, m2;
     // Case-sensitive on purpose: records have a "Title" field, and only error bodies use "title".
-    var sayRx = [/"(CustomMessage|InternalMessage|[Mm]essage|ExceptionMessage|MessageDetail|error_description|error|title|detail)"\s*:\s*"((?:[^"\\]|\\.)*)"/g,
+    var sayRx = [/"(CustomMessage|InternalMessage|[Mm]essage|ExceptionMessage|MessageDetail|error_description|[Ee]rror|title|detail)"\s*:\s*"((?:[^"\\]|\\.)*)"/g,
       /<(Message|ExceptionMessage|MessageDetail|CustomMessage|InternalMessage|faultstring)>([^<]{1,600})<\/\1>/gi];
     sayRx.forEach(function (rx) {
       while ((m2 = rx.exec(t)) && c.said.length < 4) {
@@ -1489,6 +1491,7 @@
       var text = input.value;
       if (!text.trim()) { out.innerHTML = ''; live.textContent = ''; last = null; return; }
       var c = decAnalyze(text, { api: pickApi.value, call: pickCall.value });
+      var hasJwt = /eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/.test(text);
       var found = decRun(c), top = found[0];
       var html = decFacts(c);
       if (c.said.length) {
@@ -1502,7 +1505,8 @@
             return '<details class="dec-alt sev-' + f.card.sev + '"><summary>' + f.card.title + '</summary>' + decCard(f.card, sevLabel[f.card.sev]) + '</details>';
           }).join('') + '</div>';
         }
-        html += '<div class="dec-actions"><button class="mini-btn" type="button" data-dec="summary">' + icon('i-copy') + 'Copy a summary for the ticket</button></div>';
+        html += '<div class="dec-actions"><button class="mini-btn" type="button" data-dec="summary">' + icon('i-copy') + 'Copy a summary for the ticket</button>' +
+          (c.status === 401 && !hasJwt ? '<button class="mini-btn" type="button" data-open-modal="token">' + icon('i-key') + 'Inspect a token</button>' : '') + '</div>';
         live.textContent = 'Likely cause: ' + htmlText(top.card.title);
       } else {
         html += '<div class="ts-result sev-info"><span class="lbl">No match yet</span><h5>Nothing here the decoder recognizes</h5>' +
@@ -1511,7 +1515,8 @@
         live.textContent = 'No match yet';
       }
       if (c.secret) {
-        html += '<div class="callout warn dec-secret">' + icon('i-shield') + '<div><span class="callout-title">This text includes a live token or secret</span><p>It stays in your browser, but remove it before you paste this into a ticket, chat, or email.</p></div></div>';
+        html += '<div class="callout warn dec-secret">' + icon('i-shield') + '<div><span class="callout-title">This text includes a live token or secret</span><p>It stays in your browser, but remove it before you paste this into a ticket, chat, or email.</p>' +
+          (hasJwt ? '<p><button class="mini-btn" type="button" data-dec="inspect">' + icon('i-key') + 'Inspect the token</button></p>' : '') + '</div></div>';
       }
       out.innerHTML = html;
       last = { c: c, top: top };
@@ -1531,6 +1536,8 @@
         input.value = ''; pickApi.value = ''; pickCall.value = '';
         decode();
         input.focus();
+      } else if (act && act.getAttribute('data-dec') === 'inspect') {
+        inspectToken(input.value, act);
       } else if (act && act.getAttribute('data-dec') === 'summary' && last && last.top) {
         copyText(decSummary(last.c, last.top.card), act);
       } else if (chkBtn) {
@@ -1897,6 +1904,227 @@
     var input = $('[data-rb="path"]', builders[0].el);
     if (input) { input.focus(); input.select(); }
   });
+
+  /* ----------------------------------------------------- token inspector */
+  // Decodes an AccessToken (a JWT) on this page: when it was issued, when it expires, who it is for,
+  // and what that means for a 401. Nothing is sent or saved, and the token is cleared when the
+  // dialog closes. The signature can't be checked here: that needs the server's key.
+  var TOK_LINK = {
+    renew: { ops: ['#bearer-token', 'Generate a bearer token'], est: ['#est-login', 'Logging in'], mr: ['#mr-login', 'Logging in'] },
+    use: { ops: ['#use-token', 'Using the token'], est: ['#est-headers', 'Headers every call needs'], mr: ['#mr-headers', 'Headers every call needs'] }
+  };
+  var XMLC = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/', MSC = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/';
+  var TOK_CLAIMS = {
+    iss: ['Issued by', 'Who created and signed the token'],
+    aud: ['Audience', 'The service the token is meant for'],
+    sub: ['Subject', 'The user or client the token stands for'],
+    exp: ['Expires', 'The token stops working at this time'],
+    iat: ['Issued', 'When the token was created'],
+    nbf: ['Not before', 'The token isn’t valid before this time'],
+    auth_time: ['Signed in', 'When the person signed in'],
+    jti: ['Token ID', 'A unique ID for this token'],
+    name: ['Name'], unique_name: ['User name'], given_name: ['First name'], family_name: ['Last name'],
+    email: ['Email'], upn: ['User principal name'], preferred_username: ['User name'],
+    role: ['Role'], roles: ['Roles'], scope: ['Scope', 'What the token may be used for'], scp: ['Scope', 'What the token may be used for'],
+    azp: ['Requesting app', 'The app that asked for the token'], client_id: ['Client ID', 'The app that asked for the token'],
+    amr: ['Sign-in method'], typ: ['Type'], alg: ['Algorithm']
+  };
+  TOK_CLAIMS[XMLC + 'name'] = ['User name']; TOK_CLAIMS[XMLC + 'emailaddress'] = ['Email'];
+  TOK_CLAIMS[XMLC + 'nameidentifier'] = ['User ID']; TOK_CLAIMS[XMLC + 'upn'] = ['User principal name'];
+  TOK_CLAIMS[MSC + 'role'] = ['Role']; TOK_CLAIMS[MSC + 'windowsaccountname'] = ['Windows account'];
+  var TOK_DATES = { exp: 1, iat: 1, nbf: 1, auth_time: 1 };
+  var TOK_WHO = ['name', 'unique_name', XMLC + 'name', 'preferred_username', 'email', XMLC + 'emailaddress', 'upn', MSC + 'windowsaccountname', 'sub', XMLC + 'nameidentifier'];
+
+  function b64json(part) {
+    var b = part.replace(/-/g, '+').replace(/_/g, '/');
+    b += '===='.slice(0, (4 - b.length % 4) % 4);
+    var bin = atob(b), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+  }
+  // Every token in the pasted text, labeled by the field or header it came from
+  function tokFind(text) {
+    var out = [], rx = /eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/g, m;
+    while ((m = rx.exec(text)) && out.length < 6) {
+      var before = text.slice(Math.max(0, m.index - 60), m.index);
+      var key = /"?([A-Za-z_]\w*)"?\s*[:=]\s*"?(?:Bearer\s+)?$/i.exec(before);
+      var label = /Bearer\s+$/i.test(before) ? 'Bearer token' : key ? key[1] : 'Token ' + (out.length + 1);
+      out.push({ jwt: m[0], label: label });
+    }
+    return out;
+  }
+  function tokDecode(jwt) {
+    var parts = jwt.split('.'), r = { jwt: jwt, parts: parts.length };
+    try { r.header = b64json(parts[0]); } catch (e) { r.error = 'header'; return r; }
+    try { r.claims = b64json(parts[1]); } catch (e) { r.error = 'payload'; return r; }
+    if (!parts[2]) r.unsigned = true;
+    return r;
+  }
+  function relTime(ms) {
+    var m = Math.round(Math.abs(ms) / 60000);
+    if (m < 1) return 'less than a minute';
+    if (m < 60) return m + ' min';
+    var h = Math.floor(m / 60), mm = m % 60;
+    if (h < 24) return h + ' h' + (mm ? ' ' + mm + ' min' : '');
+    var d = Math.floor(h / 24), hh = h % 24;
+    return d + (d === 1 ? ' day' : ' days') + (hh && d < 3 ? ' ' + hh + ' h' : '');
+  }
+  function tokTime(sec) {
+    var d = new Date(sec * 1000);
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) +
+      ' (' + d.toISOString().slice(11, 16) + ' UTC)';
+  }
+  function tokValue(k, v) {
+    if (TOK_DATES[k] && typeof v === 'number') return tokTime(v);
+    return typeof v === 'string' ? v : JSON.stringify(v);
+  }
+  // What kind of token this is, from its issuer
+  function tokKind(c) {
+    var iss = String(c.iss || ''), aud = [].concat(c.aud || []).join(' ');
+    var m = /(OpsAPI|EstAPI|MRAPI)_([A-Za-z0-9_-]+)/i.exec(iss + ' ' + aud);
+    if (m) return { api: { opsapi: 'ops', estapi: 'est', mrapi: 'mr' }[m[1].toLowerCase()], env: m[2] };
+    if (/trimble\.com/i.test(iss) && !/b2w/i.test(iss)) return { tid: true };
+    return {};
+  }
+
+  // The verdict and what to do about it
+  function tokVerdict(r, at) {
+    var c = r.claims, kind = tokKind(c), api = kind.api || currentProduct(), now = at || Date.now();
+    var when = at ? 'At the time you picked' : 'Right now';
+    var v = { kind: kind, api: api };
+    if (typeof c.exp !== 'number') {
+      v.pill = ['info', 'No expiry time'];
+      v.card = { sev: 'info', title: 'This token has no expiry time', body: '<p>It has no <code>exp</code> claim, so time can’t be the problem. If calls with it still fail, check the header format and that it came from the API and environment you are calling.</p>', link: TOK_LINK.use[api] };
+    } else if (now >= c.exp * 1000) {
+      var ago = relTime(now - c.exp * 1000);
+      v.pill = ['bad', 'Expired ' + ago + (at ? ' earlier' : ' ago')];
+      v.card = { sev: 'warn', title: (at ? 'At that time, it had expired ' + ago + ' earlier' : 'This token expired ' + ago + ' ago'), body:
+        '<p>Every call with it returns <span class="sc sc-4">401</span>. Log in again for a new AccessToken' + (api === 'ops' ? ', and use the newest one: Ops tokens last 1 day by default, and a newer login also retires older tokens.' : '.') + '</p>' +
+        '<p>Integrations should log in again when they get a 401 instead of reusing a saved token.</p>', link: TOK_LINK.renew[api] };
+    } else if (typeof (c.nbf != null ? c.nbf : c.iat) === 'number' && now < (c.nbf != null ? c.nbf : c.iat) * 1000) {
+      var later = relTime((c.nbf != null ? c.nbf : c.iat) * 1000 - now);
+      v.pill = ['warn', at ? 'Not issued yet at that time' : 'Not valid yet'];
+      v.card = at
+        ? { sev: 'info', title: 'At that time, this token didn’t exist yet', body: '<p>It was issued ' + later + ' after the time you picked, so the call at that time must have used a different, older token. Ask for the token from the failing call itself.</p>', link: TOK_LINK.renew[api] }
+        : { sev: 'warn', title: 'This token isn’t valid yet', body: '<p>Its start time is ' + later + ' in the future. That usually means the clock is wrong on the machine that made the call, or on this computer. Check both clocks, then log in again.</p>', link: TOK_LINK.renew[api] };
+    } else {
+      v.pill = ['ok', 'Valid · expires in ' + relTime(c.exp * 1000 - now)];
+      v.card = { sev: 'ok', title: when + ', the token hasn’t expired', body: '<p>Time isn’t the problem. If calls with it still return 401, check:</p><ul>' +
+        '<li>The header reads exactly <code>Authorization: Bearer &lt;token&gt;</code>.</li>' +
+        '<li>It came from the same API and environment the call goes to.</li>' +
+        (api === 'ops' ? '<li>Nobody logged in again since. A newer login retires older tokens.</li>' : '<li><code>ClientID</code> and <code>ClientSecret</code>, if Client ID Security is on.</li>') +
+        '</ul>', link: TOK_LINK.use[api] };
+    }
+    if (kind.tid) {
+      v.card = { sev: 'info', title: 'This is a Trimble ID token, not an Ops token', body: '<p>Its issuer is Trimble ID. Ops data calls don’t accept it directly: send it to <code>/LoginWithTID</code>, which exchanges it for an Ops AccessToken for the linked Ops user.</p><p>' + esc(v.pill[1]) + '.</p>', link: ['#login-methods', 'LoginWithTID'] };
+    }
+    return v;
+  }
+
+  var tokenTool = null;
+  function mountToken(el) {
+    el.innerHTML =
+      '<div class="tool token">' +
+        '<div class="tool-head"><span class="tool-tag">Tool</span><h4>Token inspector</h4></div>' +
+        '<div class="tool-body">' +
+          '<label class="dec-label" for="tok-input">Paste a token</label>' +
+          '<textarea id="tok-input" rows="4" spellcheck="false" autocomplete="off" data-lpignore="true" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOi…"></textarea>' +
+          '<p class="chk-hint">An AccessToken, an <code>Authorization: Bearer</code> header, or the whole login response. Postman, PowerShell, and cURL output work too.</p>' +
+          '<div class="tok-bar">' +
+            '<label class="tok-at" for="tok-at">Check against <input id="tok-at" type="datetime-local"><span class="tok-at-hint">Leave empty for right now. Pick the time a call failed to see whether the token had expired then.</span></label>' +
+            '<button class="btn btn-sm" type="button" data-tok="clear">Clear</button>' +
+          '</div>' +
+          '<p class="visually-hidden" aria-live="polite"></p>' +
+          '<div class="tok-out"></div>' +
+        '</div>' +
+      '</div>';
+    var input = $('textarea', el), at = $('#tok-at', el), out = $('.tok-out', el), live = $('[aria-live]', el);
+    var found = [], pick = 0, timer = null, last = null;
+    function render() {
+      var text = input.value.trim();
+      found = text ? tokFind(text) : [];
+      if (pick >= found.length) pick = 0;
+      if (!text) { out.innerHTML = ''; live.textContent = ''; last = null; return; }
+      if (!found.length && /\beyJ[A-Za-z0-9_-]{8,}(\.[A-Za-z0-9_-]*)?\s*$/.test(text)) {
+        out.innerHTML = '<div class="ts-result sev-warn"><span class="lbl">Can’t read it</span><h5>This token was cut off</h5><p>It starts like a token but stops before its third part. A whole AccessToken is one long line with two dots in it. Copy it again, all the way to the end.</p></div>';
+        live.textContent = 'This token was cut off'; last = null; return;
+      }
+      if (!found.length) {
+        var opaque = /^(Bearer\s+)?[A-Za-z0-9._~+\/=-]{16,}$/.test(text);
+        out.innerHTML = '<div class="ts-result sev-info"><span class="lbl">Nothing to decode</span><h5>' + (opaque ? 'This isn’t a JWT' : 'No token found in this text') + '</h5>' +
+          '<p>' + (opaque ? 'A JWT is three parts separated by dots, and starts with <code>eyJ</code>. This value has no readable parts inside, like the RefreshToken from a login.' : 'An AccessToken starts with <code>eyJ</code> and is one long line with two dots in it. Paste the token, the Authorization header, or the whole login response.') + '</p></div>';
+        live.textContent = 'No token found'; last = null; return;
+      }
+      var r = tokDecode(found[pick].jwt);
+      var html = found.length > 1 ? '<div class="tok-pick"><label for="tok-which">Found ' + found.length + ' tokens</label><select id="tok-which">' +
+        found.map(function (f, i) { return '<option value="' + i + '"' + (i === pick ? ' selected' : '') + '>' + esc(f.label) + '</option>'; }).join('') + '</select></div>' : '';
+      if (r.error || r.parts !== 3) {
+        out.innerHTML = html + '<div class="ts-result sev-warn"><span class="lbl">Can’t read it</span><h5>This doesn’t decode as a token</h5><p>' +
+          (r.parts !== 3 ? 'A JWT has exactly three parts separated by dots; this one has ' + r.parts + '.' : 'The ' + r.error + ' part isn’t valid.') +
+          ' It was most likely cut off or changed when it was copied. Copy the whole AccessToken again: it is one long line.</p></div>';
+        live.textContent = 'This doesn’t decode as a token'; last = null; return;
+      }
+      var atMs = at.value ? new Date(at.value).getTime() : null;
+      var v = tokVerdict(r, atMs), c = r.claims;
+      var who = TOK_WHO.filter(function (k) { return c[k] != null; })[0];
+      var facts = [['Status', '<span class="tok-pill ' + v.pill[0] + '">' + esc(v.pill[1]) + '</span>']];
+      if (typeof c.iat === 'number') facts.push(['Issued', esc(tokTime(c.iat))]);
+      if (typeof c.exp === 'number') facts.push(['Expires', esc(tokTime(c.exp))]);
+      if (typeof c.iat === 'number' && typeof c.exp === 'number') {
+        var life = (c.exp - c.iat) * 1000;
+        facts.push(['Lifetime', esc(relTime(life)) + (v.api === 'ops' && !v.kind.tid ? (Math.abs(life - 864e5) < 6e4 ? ' <small>the Ops default</small>' : ' <small>Ops default is 1 day</small>') : '')]);
+      }
+      if (who) facts.push(['User', esc(tokValue(who, c[who])) + ' <small>' + esc((TOK_CLAIMS[who] || [who])[0]) + '</small>']);
+      if (v.kind.env) facts.push(['Environment', '<code>' + esc(v.kind.env) + '</code> <small>' + esc(DEC_API[v.kind.api]) + '</small>']);
+      if (c.iss) facts.push(['Issued by', '<code>' + esc(String(c.iss)) + '</code>']);
+      if (c.aud) facts.push(['Audience', '<code>' + esc([].concat(c.aud).join(', ')) + '</code>']);
+      facts.push(['Signature', esc(r.header.alg || 'unknown') + (r.unsigned ? ' <small>no signature: not a real AccessToken</small>' : ' <small>not checked here, that needs the server’s key</small>')]);
+      html += '<dl class="dec-facts">' + facts.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>';
+      html += decCard(v.card, v.card.sev === 'ok' ? 'Not an expiry problem' : v.card.sev === 'info' ? 'Good to know' : 'Likely cause');
+      var rows = Object.keys(c).map(function (k) {
+        var meta = TOK_CLAIMS[k] || [];
+        return '<tr><td><code>' + esc(k.replace(XMLC, '…/').replace(MSC, '…/')) + '</code>' + (meta[0] ? '<br><small>' + esc(meta[0]) + '</small>' : '') + '</td><td>' + esc(tokValue(k, c[k])) + (meta[1] ? '<br><small>' + esc(meta[1]) + '</small>' : '') + '</td></tr>';
+      }).join('');
+      html += '<details class="tok-claims"><summary>Everything inside the token (' + Object.keys(c).length + ' claims)</summary><div class="table-wrap"><table><thead><tr><th scope="col">Claim</th><th scope="col">Value</th></tr></thead><tbody>' + rows + '</tbody></table></div></details>';
+      html += '<div class="dec-actions"><button class="mini-btn" type="button" data-tok="summary">' + icon('i-copy') + 'Copy findings for the ticket</button><span class="tok-note">The token itself is never included.</span></div>';
+      out.innerHTML = html;
+      live.textContent = v.pill[1];
+      last = { v: v, c: c, who: who, r: r };
+    }
+    function summary() {
+      var c = last.c, lines = ['Token check (decoded locally; the token itself is not included)', 'Status: ' + last.v.pill[1] + (at.value ? ' (checked against ' + new Date(at.value).toLocaleString('en-US') + ')' : '')];
+      if (typeof c.iat === 'number') lines.push('Issued: ' + tokTime(c.iat));
+      if (typeof c.exp === 'number') lines.push('Expires: ' + tokTime(c.exp));
+      if (last.who) lines.push('User: ' + tokValue(last.who, c[last.who]));
+      if (c.iss) lines.push('Issued by: ' + c.iss);
+      if (c.aud) lines.push('Audience: ' + [].concat(c.aud).join(', '));
+      lines.push('', 'Likely cause: ' + htmlText(last.v.card.title), htmlText(last.v.card.body));
+      return lines.join('\n');
+    }
+    input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(render, 150); });
+    input.addEventListener('paste', function () { setTimeout(render, 0); });
+    at.addEventListener('input', render);
+    el.addEventListener('change', function (e) { if (e.target.id === 'tok-which') { pick = +e.target.value; render(); } });
+    el.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-tok]');
+      if (!b) return;
+      if (b.getAttribute('data-tok') === 'clear') { tokenTool.clear(); input.focus(); }
+      else if (b.getAttribute('data-tok') === 'summary' && last) copyText(summary(), b);
+    });
+    // Keep "expires in" current while the dialog is open
+    setInterval(function () { if (last && !el.closest('.modal').hidden && !at.value) render(); }, 30000);
+    tokenTool = {
+      load: function (text) { input.value = text || ''; pick = 0; render(); },
+      clear: function () { input.value = ''; at.value = ''; pick = 0; render(); }
+    };
+  }
+  $$('[data-token]').forEach(mountToken);
+  // Open the inspector with a token from elsewhere on the page (the decoder hands one over)
+  function inspectToken(text, trigger) {
+    if (!tokenTool) return;
+    openModal('token', trigger);
+    tokenTool.load(text);
+  }
 
   /* ---------------------------------------------------------------- quiz */
   var quizItems = $$('.quiz-item'), scoreText = $('#quiz-score-text'), meter = $('#quiz-meter');

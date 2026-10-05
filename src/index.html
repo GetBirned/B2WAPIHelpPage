@@ -89,6 +89,7 @@
     <a class="icon-btn gh-btn" href="https://github.com/GetBirned" target="_blank" rel="noopener" aria-label="GitHub: GetBirned" title="GitHub: GetBirned"><svg class="ic ic-fill"><use href="#i-github"/></svg></a>
     <button class="icon-btn env-btn" type="button" data-open-modal="checker" aria-label="Check an environment" title="Check an environment"><svg class="ic"><use href="#i-signal"/></svg></button>
     <button class="icon-btn dec-btn" type="button" data-open-modal="decoder" aria-label="Decode an error" title="Decode an error"><svg class="ic"><use href="#i-decode"/></svg></button>
+    <button class="icon-btn tok-btn" type="button" data-open-modal="token" aria-label="Inspect a token" title="Inspect a token"><svg class="ic"><use href="#i-key"/></svg></button>
     <button class="icon-btn" id="theme-btn" type="button" aria-label="Switch between light and dark theme">
       <svg class="ic theme-light-only"><use href="#i-moon"/></svg>
       <svg class="ic theme-dark-only"><use href="#i-sun"/></svg>
@@ -819,6 +820,7 @@ apiSecret: &lt;your User API Secret&gt;</code></pre>
         <li>When a token expires, data calls return <span class="sc sc-4">401 Unauthorized</span>. Log in again for a new one.</li>
         <li>The response also includes a <code>RefreshToken</code>. The catalog has no refresh endpoint, so when your token expires, simply log in again.</li>
       </ul>
+      <p>Is a token expired, or whose is it? Paste it into the <button class="link-btn" type="button" data-open-modal="token">token inspector</button>. It shows when the token was issued and expires, and who it belongs to. It decodes the token on this page only and clears it when you close the window.</p>
       <div class="callout danger">
         <svg class="ic"><use href="#i-shield"/></svg>
         <div><span class="callout-title">A token is a password for a day</span><p>Anyone holding it can act as you until it expires. Don’t paste tokens into tickets, chats, or screenshots.</p></div>
@@ -1859,6 +1861,7 @@ password: &lt;password&gt;</code></pre>
           </tbody>
         </table>
       </div>
+      <p>Is a token expired, or whose is it? Paste it into the <button class="link-btn" type="button" data-open-modal="token">token inspector</button>. It shows when the token was issued and expires, and who it belongs to. It decodes the token on this page only and clears it when you close the window.</p>
       <div class="callout danger">
         <svg class="ic"><use href="#i-shield"/></svg>
         <div><span class="callout-title">This login uses a real Windows password</span><p>Never ask a customer to send their password, and never paste one into a ticket or chat. If you need to test, use an account you are allowed to use.</p></div>
@@ -2339,6 +2342,7 @@ password: &lt;password&gt;</code></pre>
         </div>
       </div>
       <p>The responses match the Estimate API: <span class="sc sc-2">200</span> with the AccessToken, <span class="sc sc-4">400</span> when a header is missing (B2WTechSupport answers <code>"Both userName and password must be specified in the request header"</code>), <span class="sc sc-4">401</span> when the user is not authorized, and <span class="sc sc-5">500</span> for server errors.</p>
+      <p>Is a token expired, or whose is it? Paste it into the <button class="link-btn" type="button" data-open-modal="token">token inspector</button>. It shows when the token was issued and expires, and who it belongs to. It decodes the token on this page only and clears it when you close the window.</p>
     </section>
 
     <section class="q" id="mr-headers" aria-labelledby="h-mr-headers">
@@ -2607,6 +2611,16 @@ EstimateREF: &lt;ObjectID of the estimate&gt;</code></pre>
       <button class="icon-btn modal-close" type="button" data-close-modal aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div class="decoder-mount" data-decoder></div>
+  </div>
+</div>
+
+<div class="modal" id="token-modal" role="dialog" aria-modal="true" aria-labelledby="token-modal-title" hidden>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="token-modal-title">Token inspector<span class="modal-sub">Decoded on this page only. Nothing is sent or saved, and the token is cleared when you close this window.</span></h2>
+      <button class="icon-btn modal-close" type="button" data-close-modal aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="token-mount" data-token></div>
   </div>
 </div>
 

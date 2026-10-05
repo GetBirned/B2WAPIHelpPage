@@ -26,6 +26,12 @@ It is the "What does this error mean?" question in each guide's troubleshooting 
 
 Pick an environment (paste the customer's Ops address), an API, a login method, and an endpoint, then add OData options, `DatabaseName`, `EstimateREF`, an `ObjectID`, or a JSON body as the call needs. The builder writes the same request, login step included, for Postman (which variables and headers to set), PowerShell, cURL, and raw HTTP. It only offers the methods each endpoint supports, flags endpoint names that aren't in the catalog, and warns before POST, PUT, and DELETE. Credentials always stay placeholders, so no secret is typed into the page. It opens from the **Request builder** button in the top bar, next to the API switch, and follows the guide you're reading until you edit it. Every endpoint in the explorers also has a **Build** button that opens the builder with that endpoint loaded.
 
+### Token inspector
+
+Paste an AccessToken, an `Authorization: Bearer` header, or a whole login response, and the inspector decodes the JWT: when it was issued and expires, its lifetime (Ops defaults to 1 day), who it belongs to, its issuer and audience, and every claim inside. It explains what that means for a 401 (expired, not valid yet, still valid so look elsewhere, or a Trimble ID token that belongs on `/LoginWithTID`), and can check the token against the time a call failed. It finds every token in pasted text, flags tokens that were cut off when copied, and copies findings for the ticket without the token. Decoding happens on the page only; the token is cleared when the dialog closes, and the signature isn't checked (that needs the server's key).
+
+It opens from the key icon in the top bar, from each guide's login section, and from the error decoder, which offers **Inspect the token** when pasted text contains one.
+
 ## Use it
 
 Open `dist/B2W-API-Help-Guide.html` in any browser. It is one self-contained file (styles, scripts, and screenshots are embedded), so it can be shared as-is. Printable versions:
@@ -46,8 +52,8 @@ src/
   index.html     page content; each API is a <div class="product-view" data-view="ops|est|mr">,
                  and each has its own sidebar list in <div class="toc-product" data-for="…">
   styles.css     design tokens at the top, including the per-API color schemes
-  app.js         switcher, search, tabs, environment checker, error decoder, request builder, endpoint explorers,
-                 troubleshooter, quiz
+  app.js         switcher, search, tabs, environment checker, error decoder, request builder, token inspector,
+                 endpoint explorers, troubleshooter, quiz
   images/        redacted, annotated screenshots (WebP) and logo marks
 build.py         bundles src/ into dist/B2W-API-Help-Guide.html
 tools/
