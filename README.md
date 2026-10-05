@@ -34,6 +34,12 @@ Paste an AccessToken, an `Authorization: Bearer` header, or a whole login respon
 
 It opens from the key icon in the top bar, from each guide's login section, and from the error decoder, which offers **Inspect the token** when pasted text contains one.
 
+### Logo
+
+The API hexagon logo is built from the B2W logo: the same hexagon, two-tone shading, and inner outline, with "API" drawn from the B2W lettering's measured strokes. It comes in each guide's color: Trimble Blue for Ops (the default), green for Estimate, and violet for Management Reporting. On the page it is one inline SVG symbol whose colors follow the API switch (`--logo-*` variables in `styles.css`); the top bar adds a light edge so the hexagon stays visible on a header of the same color. The browser tab icon switches with the guide too.
+
+`brand/` holds the files for use elsewhere: `api-logo-{ops,est,mr}.svg` and 1000 px / 500 px transparent PNGs, compact `api-icon-*.svg` marks for small sizes, the classic red version (`api-logo-red.*`), and `logo-versions.png`, an overview.
+
 ## Use it
 
 Open `dist/B2W-API-Help-Guide.html` in any browser. It is one self-contained file (styles, scripts, and screenshots are embedded), so it can be shared as-is. Printable versions:
@@ -57,11 +63,12 @@ src/
   fields.js      generated field lists for the $filter helper (see below)
   app.js         switcher, search, tabs, environment checker, error decoder, request builder, token inspector,
                  endpoint explorers, troubleshooter, quiz
-  images/        redacted, annotated screenshots (WebP) and logo marks
+  images/        redacted, annotated screenshots (WebP) and the per-guide tab icons
 build.py         bundles src/ into dist/B2W-API-Help-Guide.html
 tools/
   export-pdf.js  prints each guide to its own PDF with headless Chrome or Edge
   sync-fields.js rebuilds src/fields.js from each API's published OpenAPI document
+brand/           the API logo in each guide's color (SVG and PNG)
 source-material/ (not in git) original notes, slides, and raw screenshots
 ```
 

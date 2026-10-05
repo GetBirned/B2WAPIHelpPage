@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 144" role="img" aria-label="API logo, classic red">
+  <defs>
+    <linearGradient id="api-l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8d2115"/><stop offset="1" stop-color="#a82c19"/></linearGradient>
+    <linearGradient id="api-r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#720805"/><stop offset="1" stop-color="#981009"/></linearGradient>
+  </defs>
+  <polygon points="0,34 125,0 125,144 0,110" fill="url(#api-l)"/>
+  <polygon points="125,0 250,34 250,110 125,144" fill="url(#api-r)"/>
+  <polygon points="125,8.55 241.75,40.31 241.75,103.69 125,135.45 8.25,103.69 8.25,40.31" fill="none" stroke="#fff" stroke-opacity=".84" stroke-width="1.15"/>
+  <path fill="#fff" fill-rule="evenodd" d="M 46.2 95 V 56 A 8 8 0 0 1 54.2 48 H 102.2 A 8 8 0 0 1 110.2 56 V 95 H 96.6 V 78.5 A 1.5 1.5 0 0 0 95.1 77 H 61.3 A 1.5 1.5 0 0 0 59.8 78.5 V 95 Z M 61.3 59 H 95.1 A 1.5 1.5 0 0 1 96.6 60.5 V 64.5 A 1.5 1.5 0 0 1 95.1 66 H 61.3 A 1.5 1.5 0 0 1 59.8 64.5 V 60.5 A 1.5 1.5 0 0 1 61.3 59 Z M 118.2 48 H 174.2 A 8 8 0 0 1 182.2 56 V 69 A 8 8 0 0 1 174.2 77 H 131.8 V 95 H 118.2 Z M 133.3 59 H 167.1 A 1.5 1.5 0 0 1 168.6 60.5 V 64.5 A 1.5 1.5 0 0 1 167.1 66 H 133.3 A 1.5 1.5 0 0 1 131.8 64.5 V 60.5 A 1.5 1.5 0 0 1 133.3 59 Z M 190.2 48 H 203.8 V 95 H 190.2 V 48 Z"/>
+</svg>

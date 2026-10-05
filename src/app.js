@@ -169,6 +169,8 @@
     root.setAttribute('data-product', p);
     switchBtns.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-product') === p ? 'true' : 'false'); });
     document.title = PRODUCTS[p].title;
+    var icon = $('#favicon');
+    if (icon) icon.href = icon.getAttribute('data-icon-' + p);
     $('#foot-name').textContent = PRODUCTS[p].title;
     $('#hdr-docs').href = PRODUCTS[p].docs;
     $('#hdr-collection').href = PRODUCTS[p].collection;

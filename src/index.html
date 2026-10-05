@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <title>B2W Ops API Help Guide</title>
 <meta name="description" content="How to connect to the B2W Operations (Ops) API: find the API URL, get credentials, generate a bearer token in Postman, make calls, and troubleshoot tickets. Examples use the B2WTechSupport environment.">
-<link rel="icon" type="image/png" href="images/favicon.png">
+<link rel="icon" type="image/png" id="favicon" href="images/favicon-ops.png" data-icon-ops="images/favicon-ops.png" data-icon-est="images/favicon-est.png" data-icon-mr="images/favicon-mr.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;family=Open+Sans:wdth,wght@75..100,300..800&amp;display=swap">
@@ -18,6 +18,8 @@
   (function (h) {
     var p = /^#(estimate-api$|est-)/.test(h) ? 'est' : /^#(reporting-api$|mr-)/.test(h) ? 'mr' : 'ops';
     document.documentElement.setAttribute('data-product', p);
+    var icon = document.getElementById('favicon');
+    if (icon) icon.href = icon.getAttribute('data-icon-' + p);
   })(location.hash);
 </script>
 <link rel="stylesheet" href="styles.css">
@@ -61,6 +63,16 @@
   <symbol id="i-decode" viewBox="0 0 24 24"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1"/><path d="M12 8v4.5M12 16h.01"/></symbol>
   <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/></symbol>
   <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></symbol>
+  <!-- API logo: lettering measured from the B2W logo; colors come from --logo-lt/lb/rt/rb -->
+  <linearGradient id="api-logo-l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--logo-lt)"/><stop offset="1" style="stop-color:var(--logo-lb)"/></linearGradient>
+  <linearGradient id="api-logo-r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--logo-rt)"/><stop offset="1" style="stop-color:var(--logo-rb)"/></linearGradient>
+  <symbol id="api-logo" viewBox="0 0 250 144">
+    <polygon points="0,34 125,0 125,144 0,110" fill="url(#api-logo-l)"/>
+    <polygon points="125,0 250,34 250,110 125,144" fill="url(#api-logo-r)"/>
+    <polygon points="125,8.55 241.75,40.31 241.75,103.69 125,135.45 8.25,103.69 8.25,40.31" fill="none" stroke="#fff" stroke-opacity=".84" stroke-width="1.15"/>
+    <polygon class="logo-edge" style="stroke:var(--logo-edge, none)" points="125,0.93 249.1,34.69 249.1,109.31 125,143.07 0.9,109.31 0.9,34.69" fill="none" stroke-width="3.2"/>
+    <path fill="#fff" fill-rule="evenodd" d="M 46.2 95 V 56 A 8 8 0 0 1 54.2 48 H 102.2 A 8 8 0 0 1 110.2 56 V 95 H 96.6 V 78.5 A 1.5 1.5 0 0 0 95.1 77 H 61.3 A 1.5 1.5 0 0 0 59.8 78.5 V 95 Z M 61.3 59 H 95.1 A 1.5 1.5 0 0 1 96.6 60.5 V 64.5 A 1.5 1.5 0 0 1 95.1 66 H 61.3 A 1.5 1.5 0 0 1 59.8 64.5 V 60.5 A 1.5 1.5 0 0 1 61.3 59 Z M 118.2 48 H 174.2 A 8 8 0 0 1 182.2 56 V 69 A 8 8 0 0 1 174.2 77 H 131.8 V 95 H 118.2 Z M 133.3 59 H 167.1 A 1.5 1.5 0 0 1 168.6 60.5 V 64.5 A 1.5 1.5 0 0 1 167.1 66 H 133.3 A 1.5 1.5 0 0 1 131.8 64.5 V 60.5 A 1.5 1.5 0 0 1 133.3 59 Z M 190.2 48 H 203.8 V 95 H 190.2 V 48 Z"/>
+  </symbol>
   <!-- GitHub mark (Octicons, MIT) -->
   <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.06-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
 </svg>
@@ -70,8 +82,7 @@
 <header class="topbar">
   <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-controls="toc" aria-expanded="false" aria-label="Open contents"><svg class="ic"><use href="#i-menu"/></svg></button>
   <a class="brand" href="#top" id="brand-link">
-    <img src="images/logo_mark_white.png" alt="" width="26" height="28">
-    <span class="brand-name">B2W API</span>
+    <svg class="brand-logo" role="img" aria-label="B2W API"><use href="#api-logo"/></svg>
     <span class="brand-sub">Help Guide</span>
   </a>
   <div class="product-switch" role="group" aria-label="Choose an API">
@@ -2590,7 +2601,7 @@ EstimateREF: &lt;ObjectID of the estimate&gt;</code></pre>
 </div>
 
 <footer class="site-foot">
-  <div class="brandline"><img src="images/logo_mark_blue.png" alt="" width="22" height="24"><span id="foot-name">B2W Ops API Help Guide</span></div>
+  <div class="brandline"><svg class="foot-logo" aria-hidden="true"><use href="#api-logo"/></svg><span id="foot-name">B2W Ops API Help Guide</span></div>
   <p>Built for the B2W Support Team. The Ops API guide comes from the Ops API Support Training and its walkthrough notes; the Estimate and Management Reporting guides come from their API documentation and official Postman collections. Endpoint lists, sample responses, and live results come from the B2WTechSupport environment, checked October 2, 2026. Credentials and tokens in screenshots are hidden.</p>
   <a class="foot-gh" href="https://github.com/GetBirned" target="_blank" rel="noopener"><svg class="ic ic-fill" aria-hidden="true"><use href="#i-github"/></svg>GetBirned on GitHub</a>
 </footer>

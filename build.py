@@ -37,7 +37,7 @@ def main() -> None:
         used.add(rel)
         return f'{attr}="{data_uri(rel)}"'
 
-    html = re.sub(r'(src|href)="(images/[^"]+)"', swap, html)
+    html = re.sub(r'(src|href|data-icon-\w+)="(images/[^"]+)"', swap, html)
 
     # Check the markup (before the script is inlined) for any other local file references.
     leftovers = set(re.findall(r'(?:src|href)="(?!https?:|data:|#|mailto:)([^"]+)"', html)) - {"styles.css", "fields.js", "app.js"}
