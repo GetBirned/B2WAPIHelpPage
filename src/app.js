@@ -1569,6 +1569,57 @@
   var RB_METHODS = { ops: ['GET', 'POST', 'PUT', 'DELETE'], est: ['GET', 'POST', 'PUT'], mr: ['GET'] };
   var RB_QUERY = ['$filter', '$select', '$orderby', '$top', '$skip'];
 
+  // $filter helper: conditions in, correctly quoted OData v4 out. Field lists come from fields.js,
+  // generated from each API's OpenAPI document. Syntax follows the APIs' own examples:
+  // contains(Name, 'x'), EstimateREF eq <GUID> without quotes, BidDate ge 2024-01-01T00:00:00Z.
+  var FH_TYPE = { s: 'text', n: 'number', b: 'true/false', d: 'date', D: 'date', g: 'ID' };
+  var FH_OPS = {
+    s: [['eq', 'is'], ['ne', 'is not'], ['contains', 'contains'], ['startswith', 'starts with'], ['endswith', 'ends with']],
+    n: [['eq', 'equals'], ['ne', 'doesn’t equal'], ['gt', 'is more than'], ['ge', 'is at least'], ['lt', 'is less than'], ['le', 'is at most']],
+    b: [['true', 'is true'], ['false', 'is false']],
+    d: [['on', 'is on'], ['ge', 'is on or after'], ['after', 'is after'], ['lt', 'is before'], ['le', 'is on or before']],
+    g: [['eq', 'is'], ['ne', 'is not']]
+  };
+  FH_OPS.D = FH_OPS.d;
+  var FH_PH = { s: 'Text', n: 'A number, like 42', g: 'An ID, like 02e2bd02-b667-4478-a1c6-76dedfb8958f' };
+  // Only the Ops docs show endswith(), so the other APIs don't offer it.
+  function fhOps(api, t) { return FH_OPS[t || 's'].filter(function (o) { return !(o[0] === 'endswith' && api !== 'ops'); }); }
+  function fhFields(api, path) {
+    var all = window.B2W_FIELDS && window.B2W_FIELDS[api];
+    if (!all) return null;
+    var hit = decFindEndpoint(api, path);
+    return all[hit ? hit.name : path] || null;
+  }
+  function fhDay(ymd, add) {
+    var d = new Date(ymd + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + add);
+    return d.toISOString().slice(0, 10);
+  }
+  function fhCond(api, r) {
+    var f = (r.field || '').trim(), t = r.type || 's', v = (r.value || '').trim();
+    if (!f) return {};
+    if (!/^[A-Za-z_][\w./]*$/.test(f)) return { error: '“' + f + '” isn’t a field name: use letters and numbers only' };
+    if (t === 'b') return { expr: f + ' eq ' + r.op };
+    if (!v) return {};
+    if (t === 's') {
+      var q = '\'' + v.replace(/'/g, '\'\'') + '\'';   // OData escapes a quote by doubling it
+      return { expr: /^(eq|ne)$/.test(r.op) ? f + ' ' + r.op + ' ' + q : r.op + '(' + f + ', ' + q + ')' };
+    }
+    if (t === 'n') return /^-?\d+(\.\d+)?$/.test(v) ? { expr: f + ' ' + r.op + ' ' + v } : { error: f + ' needs a number, like 42 or 3.5' };
+    if (t === 'g') return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v) ? { expr: f + ' ' + r.op + ' ' + v } : { error: f + ' needs a full ID, like 02e2bd02-b667-4478-a1c6-76dedfb8958f' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return { error: f + ' needs a date' };
+    // Dates compare by whole day. The Estimate docs use date-only values; Ops and MR use midnight UTC.
+    var lit = function (ymd) { return api === 'est' || t === 'D' ? ymd : ymd + 'T00:00:00Z'; };
+    var a = lit(v), b = lit(fhDay(v, 1));
+    return { expr: { on: f + ' ge ' + a + ' and ' + f + ' lt ' + b, ge: f + ' ge ' + a, after: f + ' ge ' + b, lt: f + ' lt ' + a, le: f + ' lt ' + b }[r.op], group: r.op === 'on' };
+  }
+  function fhExpr(api, rows, join) {
+    var parts = [], problems = [];
+    rows.forEach(function (r) { var c = fhCond(api, r); if (c.error) problems.push(c.error); else if (c.expr) parts.push(c); });
+    var multi = parts.length > 1;
+    return { expr: parts.map(function (c) { return c.group && multi ? '(' + c.expr + ')' : c.expr; }).join(' ' + join + ' '), problems: problems, count: parts.length };
+  }
+
   // Quoting for each shell
   function psStr(v) { return '"' + String(v).replace(/[`"$]/g, '`$&') + '"'; }
   function shArg(v) { v = String(v); return v.indexOf('\'') < 0 ? '\'' + v + '\'' : '"' + v.replace(/[\\"$`]/g, '\\$&') + '"'; }
@@ -1621,6 +1672,8 @@
       c.bodyCompact = json !== null ? JSON.stringify(json) : c.body.replace(/\s*\n\s*/g, ' ');
     }
     c.qs = c.query.length ? '?' + c.query.map(function (q) { return q[0] + '=' + qsEnc(q[1]); }).join('&') : '';
+    // Postman encodes the URL itself, so its card shows the query the way people type it.
+    c.qsPlain = c.query.length ? '?' + c.query.map(function (q) { return q[0] + '=' + q[1]; }).join('&') : '';
     m.call = c;
     return m;
   }
@@ -1729,7 +1782,7 @@
       var note = m.api === 'ops' ? 'Authorization comes from the collection: Bearer Token, <span class="var">{{accessToken}}</span>.'
         : 'The collection’s pre-request script logs in and adds the token' + (m.call.headers.some(function (h) { return h.k === 'ClientID'; }) ? ', ClientID, and ClientSecret' : '') + ' for you.';
       if (m.api === 'ops') hs = hs.filter(function (h) { return !h.auth; });
-      html += reqCard(m.call.method, m.call.path, m.call.qs, hs, m.call.body, m.login && m.api === 'ops' ? 'Step 2 · The call' : 'The call', m.open ? 'No login needed for this one.' : note);
+      html += reqCard(m.call.method, m.call.path, m.call.qsPlain, hs, m.call.body, m.login && m.api === 'ops' ? 'Step 2 · The call' : 'The call', m.open ? 'No login needed for this one.' : note);
     }
     return html;
   }
@@ -1769,6 +1822,18 @@
               field('db', 'DatabaseName', '', 'rb-db" data-show="est mr') +
               field('ref', 'EstimateREF <span class="rb-req" hidden>needed for this call</span>', ' placeholder="The estimate’s ObjectID"', 'rb-ref" data-show="est mr') +
               field('q-$filter', '<code>$filter</code>', '', 'span-2" data-method="GET') +
+              '<div class="rb-fh span-2" data-method="GET">' +
+                '<button type="button" class="rb-fh-toggle" aria-expanded="false" aria-controls="' + id('fh') + '">' + icon('i-plus') + '<span>Build the filter with the helper</span></button>' +
+                '<div class="rb-fh-panel" id="' + id('fh') + '" hidden>' +
+                  '<div class="rb-fh-rows"></div>' +
+                  '<div class="rb-fh-foot"><button class="mini-btn" type="button" data-fh="add">' + icon('i-plus') + 'Add a condition</button>' +
+                    '<div class="rb-fh-join" role="radiogroup" aria-label="How to combine the conditions"><span>Match</span>' +
+                      '<label><input type="radio" name="' + id('join') + '" value="and" data-fh="join" checked>all of them</label>' +
+                      '<label><input type="radio" name="' + id('join') + '" value="or" data-fh="join">any of them</label></div>' +
+                  '</div>' +
+                  '<p class="hint rb-fh-note"></p>' +
+                '</div>' +
+              '</div>' +
               field('q-$select', '<code>$select</code>', '', '" data-method="GET') +
               field('q-$orderby', '<code>$orderby</code>', '', '" data-method="GET') +
               field('q-$top', '<code>$top</code>', ' inputmode="numeric" placeholder="100 at most"', '" data-method="GET') +
@@ -1817,7 +1882,116 @@
       $('datalist', el).innerHTML = EXPLORERS[s.api].entries.map(function (e) {
         return e.methods.length ? e.name : e.extras.length ? e.extras[0][1].replace(/\{input\}/, 'hello') : '';
       }).filter(Boolean).map(function (p) { return '<option value="' + esc(p) + '">'; }).join('');
+      fhSync();
     }
+
+    // ---- $filter helper
+    var fh = { rows: [{}], join: 'and', fields: null, key: '', wrote: false };
+    var fhPanel = $('.rb-fh-panel', el), fhToggle = $('.rb-fh-toggle', el), fhRows = $('.rb-fh-rows', el);
+    function fhRowHtml(r, i) {
+      var fields = fh.fields, free = !fields || r.other;
+      var ops = fhOps(s.api, r.type);
+      if (!ops.some(function (o) { return o[0] === r.op; })) r.op = ops[0][0];
+      var html = '<div class="rb-fh-row" data-i="' + i + '">';
+      if (fields) {
+        html += '<select data-fh="field" aria-label="Field"><option value="">Pick a field</option>' + fields.map(function (f) {
+          return '<option value="' + esc(f[0]) + '"' + (!r.other && f[0] === r.field ? ' selected' : '') + '>' + esc(f[0]) + ' · ' + FH_TYPE[f[1]] + '</option>';
+        }).join('') + '<option value="__other"' + (r.other ? ' selected' : '') + '>Another field…</option></select>';
+      }
+      if (free) {
+        html += '<input data-fh="name" type="text" aria-label="Field name" placeholder="Field name" spellcheck="false" autocomplete="off" value="' + esc(r.field || '') + '">' +
+          '<select data-fh="type" aria-label="Field type">' + ['s', 'n', 'b', 'd', 'g'].map(function (t) { return '<option value="' + t + '"' + (t === (r.type || 's') ? ' selected' : '') + '>' + FH_TYPE[t] + '</option>'; }).join('') + '</select>';
+      }
+      html += '<select data-fh="op" aria-label="Condition">' + ops.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === r.op ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>';
+      if (r.type !== 'b') {
+        var date = r.type === 'd' || r.type === 'D';
+        html += '<input data-fh="value" type="' + (date ? 'date' : 'text') + '" aria-label="Value" spellcheck="false" autocomplete="off"' + (r.type === 'n' ? ' inputmode="decimal"' : '') +
+          ' placeholder="' + esc(r.ex && !date ? 'e.g. ' + r.ex : FH_PH[r.type || 's'] || '') + '" value="' + esc(r.value || '') + '">';
+      }
+      return html + '<button class="rb-fh-x" type="button" data-fh="remove" aria-label="Remove this condition">' + icon('i-x') + '</button></div>';
+    }
+    function fhDraw() { fhRows.innerHTML = fh.rows.map(fhRowHtml).join(''); }
+    function fhApply() {
+      var res = fhExpr(s.api, fh.rows, fh.join), note = $('.rb-fh-note', el);
+      if (res.count || fh.wrote) {
+        s.q.$filter = res.expr; get('q-$filter').value = res.expr;
+        fh.wrote = true; edited = true;
+      }
+      var dated = fh.rows.some(function (r) { return (r.type === 'd' || r.type === 'D') && r.value; });
+      note.innerHTML = res.problems.length ? '<span class="rb-warn">' + esc(res.problems.join('. ')) + '.</span>'
+        : dated ? 'Dates compare by whole day, starting at midnight' + (s.api === 'est' ? '' : ' UTC') + '. Records store local times, so if one near midnight goes missing, widen the range by a day.'
+        : res.count ? 'The helper writes the <code>$filter</code> box above, with the quotes and format each field needs.'
+        : fh.fields ? 'Pick a field, a condition, and a value. Fields come from this endpoint’s API documentation.'
+        : 'This endpoint has no field list, so type the field name and pick its type.';
+      render();
+    }
+    // A new endpoint keeps the conditions whose fields it also has.
+    function fhSync() {
+      var path = '/' + s.path.trim().replace(/^\/+/, '').split(/[?#]/)[0], key = s.api + path;
+      if (key === fh.key) return;
+      fh.key = key;
+      fh.fields = fhFields(s.api, path);
+      fh.rows = fh.rows.filter(function (r) {
+        if (!r.field || r.other) return !!r.other;
+        var f = fh.fields && fh.fields.filter(function (x) { return x[0] === r.field; })[0];
+        if (f) { r.type = f[1]; r.ex = f[2]; }
+        return !!f;
+      });
+      if (!fh.rows.length) fh.rows = [{}];
+      fhDraw();
+      // If the helper wrote the filter, rewrite it so conditions that just went away leave it too.
+      if (fh.wrote) fhApply();
+    }
+    function fhOpen(open) {
+      fhPanel.hidden = !open;
+      fhToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      $('span', fhToggle).textContent = open ? 'Hide the filter helper' : 'Build the filter with the helper';
+      if (open) { fhDraw(); fhApply(); }
+    }
+    fhToggle.addEventListener('click', function () { fhOpen(fhPanel.hidden); });
+    function fhEvent(e) {
+      var k = e.target.getAttribute('data-fh'), row = e.target.closest('.rb-fh-row');
+      if (!k) return;
+      var r = row ? fh.rows[+row.getAttribute('data-i')] : null, redraw = false;
+      if (k === 'join') fh.join = e.target.value;
+      else if (k === 'field') {
+        var v = e.target.value;
+        if (v === '__other') { r.other = true; r.field = ''; r.type = 's'; r.ex = ''; }
+        else {
+          var f = fh.fields.filter(function (x) { return x[0] === v; })[0];
+          r.other = false; r.field = v; r.type = f ? f[1] : 's'; r.ex = f ? f[2] : '';
+        }
+        r.value = ''; r.op = ''; redraw = true;
+      } else if (k === 'name') r.field = e.target.value;
+      else if (k === 'type') { r.type = e.target.value; r.value = ''; r.op = ''; redraw = true; }
+      else if (k === 'op') r.op = e.target.value;
+      else if (k === 'value') r.value = e.target.value;
+      if (redraw) {
+        fhDraw();
+        var next = k === 'field' && r.other ? 'name' : r.type === 'b' ? 'op' : 'value';
+        var again = $('.rb-fh-row[data-i="' + row.getAttribute('data-i') + '"] [data-fh="' + next + '"]', el);
+        if (again) again.focus();
+      }
+      fhApply();
+    }
+    // Typing goes through input; the pickers go through change, so each edit is handled once.
+    fhPanel.addEventListener('input', function (e) { if (/^(name|value)$/.test(e.target.getAttribute('data-fh'))) fhEvent(e); });
+    fhPanel.addEventListener('change', function (e) { if (/^(field|type|op|join)$/.test(e.target.getAttribute('data-fh'))) fhEvent(e); });
+    fhPanel.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-fh]');
+      if (!b) return;
+      if (b.getAttribute('data-fh') === 'add') {
+        fh.rows.push({});
+        fhDraw();
+        var last = $('.rb-fh-row:last-child', el);
+        $('select, input', last).focus();
+      } else if (b.getAttribute('data-fh') === 'remove') {
+        fh.rows.splice(+b.closest('.rb-fh-row').getAttribute('data-i'), 1);
+        if (!fh.rows.length) fh.rows = [{}];
+        fhDraw();
+      }
+      fhApply();
+    });
     function render() {
       var r = parseEnv(envIn.value || DEFAULT_ENV_URL);
       if (!r.error) { s.host = r.cluster; s.env = r.env; }
@@ -1884,6 +2058,12 @@
       el: el,
       // Opened from the top bar: switch to the guide being read, unless the reader has edited it.
       follow: function (p) { if (!edited) setApi(p); },
+      // Opened from a "filter helper" link: show the helper on a GET.
+      openFilter: function () {
+        if (s.method !== 'GET' && rbMethods(s.api, s.path).indexOf('GET') > -1) { s.method = 'GET'; syncForm(); render(); }
+        fhOpen(true);
+        setTimeout(function () { fhToggle.scrollIntoView({ block: 'center' }); }, 0);
+      },
       // Opened from an explorer's Build button: that API and endpoint, ready to fill in.
       load: function (path, p) {
         if (p) s.api = p;
@@ -1895,6 +2075,12 @@
     });
   }
   $$('[data-builder]').forEach(mountBuilder);
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-open-filter]');
+    if (!b || !builders.length) return;
+    openModal('builder', b);
+    builders[0].openFilter();
+  });
   document.addEventListener('click', function (e) {
     var b = e.target.closest('[data-build]');
     if (!b || !builders.length) return;

@@ -1,6 +1,6 @@
 """Bundle the help site into one self-contained HTML file.
 
-Reads src/ (index.html, styles.css, app.js, images/) and writes
+Reads src/ (index.html, styles.css, fields.js, app.js, images/) and writes
 dist/B2W-API-Help-Guide.html with the CSS, JS, and every image inlined, so the
 result can be shared as a single file. Standard library only.
 
@@ -28,6 +28,7 @@ def main() -> None:
     html = (SRC / "index.html").read_text(encoding="utf-8")
     css = (SRC / "styles.css").read_text(encoding="utf-8")
     js = (SRC / "app.js").read_text(encoding="utf-8").replace("</script", "<\\/script")
+    fields = (SRC / "fields.js").read_text(encoding="utf-8").replace("</script", "<\\/script")
 
     used = set()
 
@@ -39,11 +40,12 @@ def main() -> None:
     html = re.sub(r'(src|href)="(images/[^"]+)"', swap, html)
 
     # Check the markup (before the script is inlined) for any other local file references.
-    leftovers = set(re.findall(r'(?:src|href)="(?!https?:|data:|#|mailto:)([^"]+)"', html)) - {"styles.css", "app.js"}
+    leftovers = set(re.findall(r'(?:src|href)="(?!https?:|data:|#|mailto:)([^"]+)"', html)) - {"styles.css", "fields.js", "app.js"}
     if leftovers:
         raise SystemExit(f"Unresolved local references: {sorted(leftovers)}")
 
     html = html.replace('<link rel="stylesheet" href="styles.css">', f"<style>\n{css}\n</style>")
+    html = html.replace('<script src="fields.js"></script>', f"<script>\n{fields}\n</script>")
     html = html.replace('<script src="app.js"></script>', f"<script>\n{js}\n</script>")
 
     OUT.parent.mkdir(exist_ok=True)

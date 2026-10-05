@@ -1007,6 +1007,7 @@ Authorization: Bearer &lt;AccessToken&gt;</code></pre>
             <li>Put text values in single quotes: <code>LastName eq 'Newman'</code>.</li>
             <li>Compare with <code>eq</code>, <code>ne</code>, <code>gt</code>, <code>ge</code>, <code>lt</code>, and <code>le</code>. Combine conditions with <code>and</code> and <code>or</code>.</li>
             <li>Join options with <code>&amp;</code>. Postman and browsers encode the spaces for you.</li>
+            <li>Not sure of a field name or how to write a date? The <button class="link-btn" type="button" data-open-filter>filter helper</button> in the request builder lists each endpoint’s fields and writes the <code>$filter</code> for you.</li>
           </ul>
         </div>
       </div>
@@ -2012,6 +2013,7 @@ DatabaseName: &lt;Estimate database name&gt;</code></pre>
           </div>
         </div>
       </div>
+      <p>The <button class="link-btn" type="button" data-open-filter>filter helper</button> in the request builder lists each endpoint’s fields and writes the <code>$filter</code> for you, with text quoted, IDs left unquoted, and dates in the format the API expects.</p>
       <div class="code">
         <div class="code-head"><span>Response · 200 OK (shortened catalog example)</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
 <pre data-lang="json"><code>{
@@ -2477,6 +2479,7 @@ EstimateREF: &lt;ObjectID of the estimate&gt;</code></pre>
           </div>
         </div>
       </div>
+      <p>The <button class="link-btn" type="button" data-open-filter>filter helper</button> in the request builder lists each endpoint’s fields and writes the <code>$filter</code> for you, with text quoted, IDs left unquoted, and dates in the format the API expects.</p>
       <div class="code">
         <div class="code-head"><span>Response · GET /Estimate (shortened catalog example)</span><button class="copy-btn" type="button"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
 <pre data-lang="json"><code>{
@@ -2640,6 +2643,7 @@ EstimateREF: &lt;ObjectID of the estimate&gt;</code></pre>
   <p id="lightbox-cap"></p>
 </div>
 
+<script src="fields.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
