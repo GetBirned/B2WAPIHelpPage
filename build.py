@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 OUT = ROOT / "dist" / "B2W-API-Help-Guide.html"
+INDEX = ROOT / "dist" / "index.html"
 
 mimetypes.add_type("image/webp", ".webp")
 
@@ -50,6 +51,17 @@ def main() -> None:
 
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(html, encoding="utf-8")
+    # When dist/ is served as a website (see Staticfile), the site root forwards to the guide,
+    # keeping any #question link.
+    INDEX.write_text(
+        '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        '<title>B2W API Help Guide</title>\n'
+        f'<script>location.replace("{OUT.name}" + location.hash);</script>\n'
+        f'<meta http-equiv="refresh" content="0; url={OUT.name}">\n'
+        '</head>\n<body>\n'
+        f'<p><a href="{OUT.name}">Open the B2W API Help Guide</a></p>\n'
+        '</body>\n</html>\n', encoding="utf-8")
     print(f"Inlined {len(used)} images -> {OUT.relative_to(ROOT)} ({OUT.stat().st_size / 1024:,.0f} KB)")
 
 

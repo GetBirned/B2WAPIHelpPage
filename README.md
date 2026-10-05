@@ -53,6 +53,12 @@ Links that open a specific guide or question directly:
 - `B2W-API-Help-Guide.html#estimate-api` and `#reporting-api`
 - Any question: `#bearer-token` (Ops), `#est-login` (Estimate), `#mr-headers` (Management Reporting)
 
+## Host it
+
+The repo deploys to Railway as-is. The `Staticfile` in the root tells Railpack to serve `dist/` as a static site (with Caddy), and `dist/index.html` forwards the site root to the guide, keeping any `#question` link. There is no build step on Railway: `dist/` is committed, so run `python build.py` and commit before deploying a change.
+
+Railway gives the service a public URL, so anyone with the link can open the guide.
+
 ## Edit it
 
 ```
@@ -64,7 +70,8 @@ src/
   app.js         switcher, search, tabs, environment checker, error decoder, request builder, token inspector,
                  endpoint explorers, troubleshooter, quiz
   images/        redacted, annotated screenshots (WebP) and the per-guide tab icons
-build.py         bundles src/ into dist/B2W-API-Help-Guide.html
+build.py         bundles src/ into dist/B2W-API-Help-Guide.html (plus dist/index.html for hosting)
+Staticfile       tells Railway's Railpack to serve dist/ as a static site
 tools/
   export-pdf.js  prints each guide to its own PDF with headless Chrome or Edge
   sync-fields.js rebuilds src/fields.js from each API's published OpenAPI document
