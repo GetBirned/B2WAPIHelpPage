@@ -22,6 +22,10 @@ Paste anything a customer sends (a status line, a JSON or XML error body, a Post
 
 It is the "What does this error mean?" question in each guide's troubleshooting part and in the header (the `{!}` icon). Decoding runs entirely in the browser: nothing pasted is sent or stored. Rules live in `app.js` (`DEC_RULES`).
 
+### Request builder
+
+Pick an environment (paste the customer's Ops address), an API, a login method, and an endpoint, then add OData options, `DatabaseName`, `EstimateREF`, an `ObjectID`, or a JSON body as the call needs. The builder writes the same request, login step included, for Postman (which variables and headers to set), PowerShell, cURL, and raw HTTP. It only offers the methods each endpoint supports, flags endpoint names that aren't in the catalog, and warns before POST, PUT, and DELETE. Credentials always stay placeholders, so no secret is typed into the page. It opens from the **Request builder** button in the top bar, next to the API switch, and follows the guide you're reading until you edit it. Every endpoint in the explorers also has a **Build** button that opens the builder with that endpoint loaded.
+
 ## Use it
 
 Open `dist/B2W-API-Help-Guide.html` in any browser. It is one self-contained file (styles, scripts, and screenshots are embedded), so it can be shared as-is. Printable versions:
@@ -42,7 +46,7 @@ src/
   index.html     page content; each API is a <div class="product-view" data-view="ops|est|mr">,
                  and each has its own sidebar list in <div class="toc-product" data-for="…">
   styles.css     design tokens at the top, including the per-API color schemes
-  app.js         switcher, search, tabs, environment checker, error decoder, endpoint explorers,
+  app.js         switcher, search, tabs, environment checker, error decoder, request builder, endpoint explorers,
                  troubleshooter, quiz
   images/        redacted, annotated screenshots (WebP) and logo marks
 build.py         bundles src/ into dist/B2W-API-Help-Guide.html

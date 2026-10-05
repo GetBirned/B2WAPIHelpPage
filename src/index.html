@@ -59,6 +59,7 @@
   <symbol id="i-signal" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/></symbol>
   <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></symbol>
   <symbol id="i-decode" viewBox="0 0 24 24"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1"/><path d="M12 8v4.5M12 16h.01"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/></symbol>
   <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></symbol>
   <!-- GitHub mark (Octicons, MIT) -->
   <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.06-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
@@ -78,6 +79,7 @@
     <button type="button" data-product="est" aria-pressed="false" aria-label="Estimate API"><span class="dot" aria-hidden="true"></span><span>Estimate<span class="sfx"> API</span></span></button>
     <button type="button" data-product="mr" aria-pressed="false" aria-label="Management Reporting API"><span class="dot" aria-hidden="true"></span><span><span class="pfx">Management </span>Reporting<span class="sfx"> API</span></span></button>
   </div>
+  <button class="tool-btn" type="button" data-open-modal="builder" aria-label="Request builder" title="Build a ready-to-run request"><svg class="ic"><use href="#i-wrench"/></svg><span>Request builder</span></button>
   <nav class="topbar-links" aria-label="Quick links">
     <a href="https://www.postman.com/downloads/" target="_blank" rel="noopener"><svg class="ic"><use href="#i-download"/></svg>Postman</a>
     <a id="hdr-collection" href="https://drive.google.com/file/d/1fJfhAF0z383mx1Io5qvFcJEHLsStrS9R/view?usp=sharing" target="_blank" rel="noopener"><svg class="ic"><use href="#i-folder"/></svg>Collection</a>
@@ -1132,6 +1134,7 @@ Authorization: Bearer &lt;AccessToken&gt;</code></pre>
         <p>The B2WTechSupport catalog (version 26.1.2.1) lists 63 functional areas and 272 operations. Most areas support GET, POST, PUT, and DELETE plus a <code>/schema</code> call. Search the list below, then open Swagger for the fields.</p>
       </div>
       <div class="tool" data-explorer="ops"></div>
+      <p>Each card’s <b>Build</b> button opens that endpoint in the <button class="link-btn" type="button" data-open-modal="builder">request builder</button>, which writes a ready-to-run request for Postman, PowerShell, cURL, or raw HTTP.</p>
       <p>The list reflects the B2WTechSupport catalog on October 2, 2026. Environments on other versions may differ, and their own Swagger page is always the source of truth.</p>
     </section>
 
@@ -2088,6 +2091,7 @@ Invoke-RestMethod -Method Put -Uri "$baseUrl/Estimate" -Headers $headers -Body (
         <p>The B2WTechSupport catalog lists 227 operations. Most areas support GET, POST, and PUT plus a <code>/schema</code> call; some are read-only. Search below, then check Swagger for the fields.</p>
       </div>
       <div class="tool" data-explorer="est"></div>
+      <p>Each card’s <b>Build</b> button opens that endpoint in the <button class="link-btn" type="button" data-open-modal="builder">request builder</button>, which adds the <code>DatabaseName</code> and <code>EstimateREF</code> headers for you and writes the request for Postman, PowerShell, cURL, or raw HTTP.</p>
     </section>
 
     <div class="part" id="est-part-troubleshoot">
@@ -2505,6 +2509,7 @@ EstimateREF: &lt;ObjectID of the estimate&gt;</code></pre>
         <p>The B2WTechSupport catalog lists 106 operations, all GET. Each area has a data call and a <code>/schema</code> call. Search below, then check Swagger for the fields.</p>
       </div>
       <div class="tool" data-explorer="mr"></div>
+      <p>Each card’s <b>Build</b> button opens that endpoint in the <button class="link-btn" type="button" data-open-modal="builder">request builder</button>, which adds the <code>DatabaseName</code> and <code>EstimateREF</code> headers for you and writes the request for Postman, PowerShell, cURL, or raw HTTP.</p>
     </section>
 
     <div class="part" id="mr-part-troubleshoot">
@@ -2598,10 +2603,20 @@ EstimateREF: &lt;ObjectID of the estimate&gt;</code></pre>
 <div class="modal" id="decoder-modal" role="dialog" aria-modal="true" aria-labelledby="decoder-modal-title" hidden>
   <div class="modal-panel">
     <div class="modal-head">
-      <h2 id="decoder-modal-title">Decode an error</h2>
+      <h2 id="decoder-modal-title">Decode an error<span class="modal-sub">Runs in your browser. Nothing you paste is sent or saved.</span></h2>
       <button class="icon-btn modal-close" type="button" data-close-modal aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div class="decoder-mount" data-decoder></div>
+  </div>
+</div>
+
+<div class="modal modal-wide" id="builder-modal" role="dialog" aria-modal="true" aria-labelledby="builder-modal-title" hidden>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h2 id="builder-modal-title">Request builder<span class="modal-sub">Credentials stay placeholders. Nothing is sent.</span></h2>
+      <button class="icon-btn modal-close" type="button" data-close-modal aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="builder-mount" data-builder></div>
   </div>
 </div>
 

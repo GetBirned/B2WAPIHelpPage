@@ -325,7 +325,8 @@
     });
     if (persist) store.set(TAB_KEY, name);
   }
-  $$('.tabs').forEach(function (tabs, n) {
+  // Wires one tab set. Also used for tab sets that tools build later, such as the request builder's.
+  function initTabs(tabs, n) {
     $$('[role="tab"]', tabs).forEach(function (b) {
       var panel = $('[data-panel="' + b.getAttribute('data-tab') + '"]', tabs);
       var id = 'tab-' + n + '-' + b.getAttribute('data-tab');
@@ -345,7 +346,8 @@
       selectTab(tabs.getAttribute('data-tabgroup'), next.getAttribute('data-tab'), true);
       next.focus();
     });
-  });
+  }
+  $$('.tabs').forEach(initTabs);
   var savedTab = store.get(TAB_KEY);
   if (savedTab) selectTab('client', savedTab, false);
 
@@ -542,6 +544,7 @@
       var anyChecked = APIS.some(function (a) { return chk.results[a.key]; });
       if (!anyChecked && !chk.error) runChecks();
     }
+    if (name === 'builder' && builders.length && !(trigger && trigger.hasAttribute('data-build'))) builders[0].follow(currentProduct());
   }
   function closeModal(restoreFocus) {
     if (!openDialog) return;
@@ -757,7 +760,9 @@
       list.innerHTML = shown.map(function (e) {
         var base = e.methods.length ? '<div class="ep-methods">' + e.methods.map(chip).join('') + (e.schema ? ' <span class="ep-extra">+ /schema</span>' : '') + (e.ref ? ' <span class="ep-tag">EstimateREF</span>' : '') + '</div>' : '';
         var extra = e.extras.map(function (x) { return '<div class="ep-extra">' + chip(x[0]) + ' ' + esc(x[1]) + '</div>'; }).join('');
-        return '<div class="ep"><div class="ep-name">' + esc(e.name) + '</div>' + base + extra + (e.note ? '<div class="ep-extra">' + esc(e.note) + '</div>' : '') + '</div>';
+        var target = (e.methods.length ? e.name : e.extras.length ? e.extras[0][1] : '').replace(/\{input\}/, 'hello');
+        var build = target ? '<button class="mini-btn ep-build" type="button" data-build="' + esc(target) + '" aria-label="Build a request for ' + esc(target) + '">' + icon('i-wrench') + 'Build</button>' : '';
+        return '<div class="ep"><div class="ep-head"><div class="ep-name">' + esc(e.name) + '</div>' + build + '</div>' + base + extra + (e.note ? '<div class="ep-extra">' + esc(e.note) + '</div>' : '') + '</div>';
       }).join('') || '<p class="ep-count">No endpoints match. Try a shorter word.</p>';
       count.textContent = 'Showing ' + shown.length + ' of ' + cfg.entries.length + ' endpoint groups · ' + total + ' operations in all';
     }
@@ -1535,6 +1540,363 @@
     });
   }
   $$('[data-decoder]').forEach(mountDecoder);
+
+  /* ----------------------------------------------------- request builder */
+  // Builds one request four ways (Postman, PowerShell, cURL, raw HTTP) for any environment, API,
+  // sign-in method, and endpoint. Credentials always stay placeholders, so no secret is typed into
+  // the page or copied into a ticket by accident.
+  var RB_LOGIN = {
+    tid: { label: 'TID UUID + User API Secret', h: [['tiduuid', '<your TID ID>', '{{tidUuid}}'], ['apiSecret', '<your User API Secret>', '{{apiSecret}}']] },
+    client: { label: 'Client ID + client secret', h: [['clientId', '<client ID>', '{{clientId}}'], ['clientSecret', '<client secret>', '{{clientSecret}}']] },
+    user: { label: 'Username + password (being retired)', h: [['userName', 'DOMAIN\\user', '{{userName}}'], ['password', '<password>', '{{password}}']] },
+    lwt: { label: 'LoginWithTID (a Trimble ID token)', path: '/LoginWithTID', h: [['Authorization', 'Bearer <Trimble ID access token>', 'Bearer {{trimbleToken}}']] },
+    ad: { h: [['userName', 'DOMAIN\\jsmith', '{{UserName}}'], ['password', '<password>', '{{Password}}']] }
+  };
+  var RB_PM = { ops: { base: 'baseUrl', token: '{{accessToken}}' }, est: { base: 'BaseURL', token: '{{Token}}' }, mr: { base: 'BaseURL', token: '{{Token}}' } };
+  var RB_DEFAULT = { ops: '/Employee', est: '/Estimate', mr: '/Estimate' };
+  var RB_HINTS = {
+    ops: { filter: 'LastName eq \'Newman\'', select: 'EmployeeID,FirstName,LastName', orderby: 'LastName' },
+    est: { filter: 'Number eq \'0006\'', select: 'Number,Name,EstimateStatus', orderby: 'Number desc' },
+    mr: { filter: 'contains(Title, \'Fox Hill\')', select: 'Title,EstimateNumber,TotalBidPriceWithTax', orderby: 'Title' }
+  };
+  var RB_METHODS = { ops: ['GET', 'POST', 'PUT', 'DELETE'], est: ['GET', 'POST', 'PUT'], mr: ['GET'] };
+  var RB_QUERY = ['$filter', '$select', '$orderby', '$top', '$skip'];
+
+  // Quoting for each shell
+  function psStr(v) { return '"' + String(v).replace(/[`"$]/g, '`$&') + '"'; }
+  function shArg(v) { v = String(v); return v.indexOf('\'') < 0 ? '\'' + v + '\'' : '"' + v.replace(/[\\"$`]/g, '\\$&') + '"'; }
+  function qsEnc(v) {
+    if (/^<[^>]+>$/.test(v)) return v;
+    return encodeURIComponent(v).replace(/%24/g, '$').replace(/%2C/gi, ',').replace(/%3A/gi, ':').replace(/%2F/gi, '/');
+  }
+  function psKey(k) { return /^[A-Za-z]\w*$/.test(k) ? k : '\'' + k + '\''; }
+  function psHash(pairs, indent) {
+    var w = Math.max.apply(null, pairs.map(function (p) { return psKey(p[0]).length; }));
+    return pairs.map(function (p) { var k = psKey(p[0]); return indent + k + new Array(w - k.length + 2).join(' ') + '= ' + p[1]; }).join('\n');
+  }
+  function rbMethods(api, path) {
+    if (/\/schema$/i.test(path)) return ['GET'];
+    var hit = decFindEndpoint(api, path);
+    var allowed = RB_METHODS[api];
+    return hit && hit.methods.length ? allowed.filter(function (m) { return hit.methods.indexOf(m) > -1; }) : allowed;
+  }
+
+  // Everything the four outputs share
+  function rbModel(s) {
+    var api = s.api, host = s.host, base = 'https://' + host + '/' + DEC_PREFIX[api] + s.env;
+    var path = '/' + s.path.trim().replace(/^\/+/, '').split(/[?#]/)[0];
+    var lg = api === 'ops' ? RB_LOGIN[s.login] : RB_LOGIN.ad;
+    var isLogin = /^\/login(withtid)?$/i.test(path);
+    var open = /^\/(ping|version)(\/|$)/i.test(path);
+    var m = { api: api, host: host, base: base, basePath: '/' + DEC_PREFIX[api] + s.env, path: path, method: s.method, open: open };
+    var loginHeaders = lg.h.map(function (h) { return { k: h[0], v: h[1], pm: h[2] }; });
+    if (api !== 'ops' && s.clientSec) loginHeaders.push({ k: 'ClientID', v: '<client ID>', pm: '{{ClientID}}' }, { k: 'ClientSecret', v: '<client secret>', pm: '{{ClientSecret}}' });
+    var loginPath = isLogin ? (api === 'ops' && /withtid/i.test(path) ? '/LoginWithTID' : path) : (lg.path || '/Login');
+    m.login = (s.doLogin && !open) || isLogin ? { path: loginPath, headers: isLogin && /withtid/i.test(path) ? [{ k: 'Authorization', v: 'Bearer <Trimble ID access token>', pm: 'Bearer {{trimbleToken}}' }] : loginHeaders } : null;
+    if (isLogin) { m.call = null; return m; }
+    var c = { method: s.method, path: path, query: [], headers: [] };
+    if (s.method === 'GET' && !open) RB_QUERY.forEach(function (k) { var v = (s.q[k] || '').trim(); if (v) c.query.push([k, v]); });
+    if (s.method === 'DELETE') c.query.push(['ObjectID', s.objectId.trim() || '<ObjectID>']);
+    if (!open) {
+      c.headers.push({ k: 'Authorization', v: 'Bearer <AccessToken>', pm: 'Bearer ' + RB_PM[api].token, auth: true });
+      if (api !== 'ops') {
+        c.headers.push({ k: 'DatabaseName', v: s.db.trim() || '<' + (api === 'mr' ? 'Data Warehouse' : 'Estimate') + ' database name>', pm: '{{DatabaseName}}' });
+        if (s.clientSec) c.headers.push({ k: 'ClientID', v: '<client ID>', pm: '{{ClientID}}' }, { k: 'ClientSecret', v: '<client secret>', pm: '{{ClientSecret}}' });
+        var hit = decFindEndpoint(api, path);
+        if (s.ref.trim() || (hit && hit.ref)) c.headers.push({ k: 'EstimateREF', v: s.ref.trim() || '<estimate ObjectID>', pm: s.ref.trim() || '{{EstimateREF}}' });
+      }
+    }
+    if (s.method === 'POST' || s.method === 'PUT') {
+      c.headers.push({ k: 'Content-Type', v: 'application/json', pm: 'application/json', ct: true });
+      var raw = s.body.trim(), json = null;
+      try { json = raw ? JSON.parse(raw) : null; } catch (e) { json = null; }
+      c.body = json !== null ? JSON.stringify(json, null, 2) : raw || (s.method === 'PUT' ? '<the whole record from a GET, with your changes>' : '<the new record as JSON>');
+      c.bodyCompact = json !== null ? JSON.stringify(json) : c.body.replace(/\s*\n\s*/g, ' ');
+    }
+    c.qs = c.query.length ? '?' + c.query.map(function (q) { return q[0] + '=' + qsEnc(q[1]); }).join('&') : '';
+    m.call = c;
+    return m;
+  }
+
+  function rbPowerShell(m) {
+    var L = ['$baseUrl = ' + psStr(m.base), ''];
+    if (m.login) {
+      L.push('# ' + (m.call ? '1. ' : '') + 'Log in. Credentials go in headers, never in the URL or the body.');
+      L.push((m.call ? '$login = ' : '$login = ') + 'Invoke-RestMethod -Method Get -Uri "$baseUrl' + m.login.path + '" -Headers @{');
+      L.push(psHash(m.login.headers.map(function (h) { return [h.k, psStr(h.v)]; }), '    '));
+      L.push('}');
+      if (!m.call) { L.push('$login.AccessToken   # this is your bearer token'); return L.join('\n'); }
+      L.push('');
+    }
+    var c = m.call, verb = c.method.charAt(0) + c.method.slice(1).toLowerCase();
+    L.push('# ' + (m.login ? '2. ' : '') + 'Call the API');
+    var hs = c.headers.filter(function (h) { return !h.ct; }).map(function (h) {
+      return [h.k, h.auth && m.login ? '"Bearer $($login.AccessToken)"' : psStr(h.v)];
+    });
+    if (hs.length) { L.push('$headers = @{', psHash(hs, '    '), '}'); }
+    var uri = '"$baseUrl' + c.path.replace(/[`"$]/g, '`$&') + (c.method === 'DELETE' ? c.qs.replace(/[`"$]/g, '`$&') : '') + '"';
+    var call = '$result = Invoke-RestMethod -Method ' + verb + ' -Uri ' + uri + (hs.length ? ' -Headers $headers' : '');
+    if (c.method === 'GET' && c.query.length) {
+      L.push('$query = @{', psHash(c.query.map(function (q) { return [q[0], /^\d+$/.test(q[1]) ? q[1] : psStr(q[1])]; }), '    '), '}');
+      L.push('', '# For GET, -Body becomes the query string');
+      call += ' -Body $query';
+    }
+    if (c.body !== undefined) {
+      L.push('$body = @\'', c.body, '\'@');
+      call += ' -Body $body -ContentType "application/json"';
+    }
+    L.push(call);
+    if (c.method === 'GET') L.push(m.api === 'ops' || m.open ? '$result' : '$result.Items' + (m.api === 'mr' ? '\n$result.Pagination   # CurrentPage, ItemsOnPage, PageSize, TotalItems' : ''));
+    else L.push('$result');
+    return L.join('\n');
+  }
+
+  function rbCurl(m) {
+    var L = [];
+    var hdr = function (h, viaVar) { return '  -H ' + (viaVar ? '"' + h.k + ': Bearer $TOKEN"' : shArg(h.k + ': ' + h.v)); };
+    if (m.login) {
+      var lines = m.login.headers.map(function (h) { return hdr(h); });
+      if (m.call) {
+        L.push('# 1. Log in and keep the token');
+        L.push('TOKEN=$(curl -s ' + shArg(m.base + m.login.path) + ' \\');
+        L.push(lines.join(' \\\n') + ' \\');
+        L.push('  | sed -E \'s/.*"AccessToken" *: *"([^"]+)".*/\\1/\')', '');
+      } else {
+        L.push('curl -s ' + shArg(m.base + m.login.path) + ' \\', lines.join(' \\\n'));
+        return L.join('\n');
+      }
+    }
+    var c = m.call, parts = [];
+    if (m.login) L.push('# 2. Call the API');
+    var url = m.base + c.path + (c.method === 'DELETE' ? c.qs : '');
+    var first = 'curl -s' + (c.method === 'GET' ? (c.query.length ? ' -G' : '') : ' -X ' + c.method) + ' ' + shArg(url);
+    if (c.method === 'GET') c.query.forEach(function (q) { parts.push('  --data-urlencode ' + shArg(q[0] + '=' + q[1])); });
+    c.headers.forEach(function (h) { parts.push(hdr(h, h.auth && m.login)); });
+    if (c.body !== undefined) parts.push('  -d ' + shArg(c.bodyCompact));
+    L.push(parts.length ? first + ' \\\n' + parts.join(' \\\n') : first);
+    return L.join('\n');
+  }
+
+  function rbHttp(m) {
+    var L = [];
+    if (m.login) {
+      L.push('GET ' + m.basePath + m.login.path + ' HTTP/1.1', 'Host: ' + m.host);
+      m.login.headers.forEach(function (h) { L.push(h.k + ': ' + h.v); });
+      if (!m.call) return L.join('\n');
+      L.push('', '# Then, with the AccessToken from the response:', '');
+    }
+    var c = m.call;
+    L.push(c.method + ' ' + m.basePath + c.path + c.qs + ' HTTP/1.1', 'Host: ' + m.host);
+    c.headers.forEach(function (h) { L.push(h.k + ': ' + h.v); });
+    if (c.body !== undefined) L.push('', c.body);
+    return L.join('\n');
+  }
+
+  function rbPostman(m) {
+    var pm = RB_PM[m.api], row = function (k, v) { return '<p class="k">' + esc(k) + '</p><p>' + v + '</p>'; };
+    var pv = function (s) { return esc(s).replace(/\{\{(\w+)\}\}/g, '<span class="var">{{$1}}</span>'); };
+    var html = '<div class="req rb-vars"><div class="req-rows"><p class="sec">Collection variables</p>' +
+      row(pm.base, '<code>' + esc(m.base) + '</code>');
+    if (m.api !== 'ops') {
+      var db = m.call && m.call.headers.filter(function (h) { return h.k === 'DatabaseName'; })[0];
+      html += row('DatabaseName', db ? esc(db.v) : 'The customer’s database') + row('UserName · Password', 'The Active Directory account and its password');
+    } else if (m.login) {
+      html += row(m.login.headers.map(function (h) { return h.pm.replace(/^Bearer /, '').replace(/[{}]/g, ''); }).join(' · '), 'Your own values');
+    }
+    html += '</div></div>';
+    var reqCard = function (method, path, qs, headers, body, title, note) {
+      var out = '<p class="rb-pm-step">' + title + '</p><div class="req"><div class="req-line"><span class="m m-' + method.toLowerCase() + '">' + method + '</span><code><span class="var">{{' + pm.base + '}}</span>' + esc(path + qs) + '</code></div><div class="req-rows">';
+      if (headers.length) out += '<p class="sec">Headers</p>' + headers.map(function (h) { return row(h.k, pv(h.pm)); }).join('');
+      if (body !== undefined) out += '<p class="sec">Body · raw · JSON</p><p class="k">JSON</p><p><code>' + esc(body.length > 160 ? body.slice(0, 160) + '…' : body) + '</code></p>';
+      if (note) out += '<p class="sec">Note</p><p class="k">Tip</p><p>' + note + '</p>';
+      return out + '</div></div>';
+    };
+    if (m.login && m.api === 'ops') {
+      html += reqCard('GET', m.login.path, '', m.login.headers, undefined, m.call ? 'Step 1 · Log in (the Auth folder has this request)' : 'Log in (the Auth folder has this request)',
+        'Put the AccessToken from the response in the <code>accessToken</code> variable.');
+    } else if (m.login && !m.call) {
+      html += reqCard('GET', m.login.path, '', m.login.headers, undefined, 'Log in', 'The official collection’s pre-request script does this before every request.');
+    }
+    if (m.call) {
+      var hs = m.call.headers.filter(function (h) { return !(m.api !== 'ops' && /^(Authorization|ClientID|ClientSecret)$/.test(h.k)); });
+      var note = m.api === 'ops' ? 'Authorization comes from the collection: Bearer Token, <span class="var">{{accessToken}}</span>.'
+        : 'The collection’s pre-request script logs in and adds the token' + (m.call.headers.some(function (h) { return h.k === 'ClientID'; }) ? ', ClientID, and ClientSecret' : '') + ' for you.';
+      if (m.api === 'ops') hs = hs.filter(function (h) { return !h.auth; });
+      html += reqCard(m.call.method, m.call.path, m.call.qs, hs, m.call.body, m.login && m.api === 'ops' ? 'Step 2 · The call' : 'The call', m.open ? 'No login needed for this one.' : note);
+    }
+    return html;
+  }
+
+  var builders = [];
+  function mountBuilder(el, n) {
+    var view = el.closest('[data-view]');
+    var s = { api: view ? view.getAttribute('data-view') : currentProduct(), login: 'tid', doLogin: true, clientSec: false,
+      method: 'GET', db: '', ref: '', objectId: '', body: '', q: { $top: '5' }, host: chk.cluster, env: chk.env };
+    s.path = RB_DEFAULT[s.api];
+    var id = function (k) { return 'rb-' + n + '-' + k; };
+    var field = function (key, label, attrs, cls) {
+      return '<div class="field ' + (cls || '') + '"><label for="' + id(key) + '">' + label + '</label><input id="' + id(key) + '" data-rb="' + key + '" type="text" spellcheck="false" autocomplete="off"' + (attrs || '') + '></div>';
+    };
+    el.innerHTML =
+      '<div class="tool builder">' +
+        '<div class="tool-head"><span class="tool-tag">Tool</span><h4>Request builder</h4><span class="meta">Credentials stay placeholders. Nothing is sent.</span></div>' +
+        '<div class="tool-body">' +
+          '<form class="rb-form" novalidate>' +
+            '<fieldset class="rb-step"><legend><span class="rb-n">1</span>Environment and API</legend><div class="fields">' +
+              field('env', 'Customer’s Ops address', ' inputmode="url" placeholder="' + DEFAULT_ENV_URL + '"', 'span-2') +
+              '<div class="field span-2"><span class="rb-label" id="' + id('apilbl') + '">API</span><div class="rb-seg" role="group" aria-labelledby="' + id('apilbl') + '">' +
+                ['ops', 'est', 'mr'].map(function (k) { return '<button type="button" data-api="' + k + '"><span class="sw sw-' + k + '" aria-hidden="true"></span>' + DEC_SHORT[k] + '</button>'; }).join('') +
+              '</div></div>' +
+              '<p class="rb-base span-2" aria-live="polite"></p>' +
+            '</div></fieldset>' +
+            '<fieldset class="rb-step"><legend><span class="rb-n">2</span>Sign in</legend><div class="fields">' +
+              '<div class="field span-2" data-show="ops"><label for="' + id('login') + '">Login method</label><select id="' + id('login') + '" data-rb="login">' +
+                ['tid', 'client', 'user', 'lwt'].map(function (k) { return '<option value="' + k + '">' + RB_LOGIN[k].label + '</option>'; }).join('') + '</select></div>' +
+              '<p class="rb-fixed span-2" data-show="est mr">Login takes an Active Directory account, as <code>DOMAIN\\user</code>, in the <code>userName</code> and <code>password</code> headers.</p>' +
+              '<label class="rb-check span-2"><input type="checkbox" data-rb="doLogin" checked>Include the login step</label>' +
+              '<label class="rb-check span-2" data-show="est mr"><input type="checkbox" data-rb="clientSec">Client ID Security is on</label>' +
+            '</div></fieldset>' +
+            '<fieldset class="rb-step rb-call"><legend><span class="rb-n">3</span>The call</legend><div class="fields">' +
+              '<div class="field"><label for="' + id('path') + '">Endpoint</label><input id="' + id('path') + '" data-rb="path" type="text" list="' + id('list') + '" spellcheck="false" autocomplete="off"><datalist id="' + id('list') + '"></datalist><span class="hint rb-path-hint"></span></div>' +
+              '<div class="field"><label for="' + id('method') + '">Method</label><select id="' + id('method') + '" data-rb="method"></select></div>' +
+              field('db', 'DatabaseName', '', 'rb-db" data-show="est mr') +
+              field('ref', 'EstimateREF <span class="rb-req" hidden>needed for this call</span>', ' placeholder="The estimate’s ObjectID"', 'rb-ref" data-show="est mr') +
+              field('q-$filter', '<code>$filter</code>', '', 'span-2" data-method="GET') +
+              field('q-$select', '<code>$select</code>', '', '" data-method="GET') +
+              field('q-$orderby', '<code>$orderby</code>', '', '" data-method="GET') +
+              field('q-$top', '<code>$top</code>', ' inputmode="numeric" placeholder="100 at most"', '" data-method="GET') +
+              field('q-$skip', '<code>$skip</code>', ' inputmode="numeric" placeholder="0"', '" data-method="GET') +
+              field('objectId', 'ObjectID of the record', ' placeholder="a4066d42-4027-4d5d-87a0-a30600f8d4cf"', 'span-2" data-method="DELETE') +
+              '<div class="field span-2" data-method="POST PUT"><label for="' + id('body') + '">Body (JSON)</label><textarea id="' + id('body') + '" data-rb="body" rows="6" spellcheck="false"></textarea><span class="hint rb-body-hint"></span></div>' +
+            '</div></fieldset>' +
+          '</form>' +
+          '<div class="rb-notes"></div>' +
+          '<div class="tabs" data-tabgroup="client">' +
+            '<div class="tablist" role="tablist" aria-label="Choose a tool">' +
+              [['postman', 'Postman'], ['powershell', 'PowerShell'], ['curl', 'cURL'], ['http', 'Raw HTTP']].map(function (t, i) {
+                return '<button type="button" role="tab" data-tab="' + t[0] + '" aria-selected="' + (i === 0) + '">' + t[1] + '</button>';
+              }).join('') +
+            '</div>' +
+            '<div class="tabpanel" role="tabpanel" data-panel="postman"><div class="rb-pm"></div></div>' +
+            [['powershell', 'PowerShell', 'powershell'], ['curl', 'cURL · bash, macOS, Git Bash', 'bash'], ['http', 'HTTP request', 'http']].map(function (t) {
+              return '<div class="tabpanel" role="tabpanel" data-panel="' + t[0] + '" hidden><div class="code"><div class="code-head"><span>' + t[1] + '</span><button class="copy-btn" type="button">' + icon('i-copy') + 'Copy</button></div><pre data-lang="' + t[2] + '"><code></code></pre></div></div>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    var get = function (k) { return $('[data-rb="' + k + '"]', el); };
+    var envIn = get('env'), pathIn = get('path'), methodSel = get('method'), bodyIn = get('body');
+    envIn.value = chk.input;
+    var tabs = $('.tabs', el);
+    initTabs(tabs, 'rb' + n);
+    var saved = store.get(TAB_KEY);
+    if (saved) selectTab('client', saved, false);
+
+    function syncForm() {
+      $$('.rb-seg button', el).forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-api') === s.api ? 'true' : 'false'); });
+      el.setAttribute('data-rb-api', s.api);
+      $$('[data-show]', el).forEach(function (x) { x.hidden = x.getAttribute('data-show').split(' ').indexOf(s.api) < 0; });
+      // Methods this endpoint takes
+      var methods = rbMethods(s.api, '/' + s.path.trim().replace(/^\/+/, '').split(/[?#]/)[0]);
+      if (methods.indexOf(s.method) < 0) s.method = methods[0];
+      methodSel.innerHTML = methods.map(function (mm) { return '<option' + (mm === s.method ? ' selected' : '') + '>' + mm + '</option>'; }).join('');
+      // Login, Ping, and Version take no query, body, or ObjectID.
+      var plain = /^\/*(login(withtid)?|ping|version)(\/|$)/i.test(s.path.trim());
+      $$('[data-method]', el).forEach(function (x) { x.hidden = plain || x.getAttribute('data-method').split(' ').indexOf(s.method) < 0 || (s.api !== 'ops' && x.getAttribute('data-method') === 'DELETE'); });
+      var h = RB_HINTS[s.api];
+      get('q-$filter').placeholder = h.filter; get('q-$select').placeholder = h.select; get('q-$orderby').placeholder = h.orderby;
+      get('db').placeholder = s.api === 'mr' ? 'The Data Warehouse database' : 'The Estimate database, such as B2WSample';
+      bodyIn.placeholder = s.method === 'PUT' ? 'Paste the whole record from a GET, with your changes' : 'Paste the new record. Tip: GET an existing record first and use it as the outline.';
+      $('datalist', el).innerHTML = EXPLORERS[s.api].entries.map(function (e) {
+        return e.methods.length ? e.name : e.extras.length ? e.extras[0][1].replace(/\{input\}/, 'hello') : '';
+      }).filter(Boolean).map(function (p) { return '<option value="' + esc(p) + '">'; }).join('');
+    }
+    function render() {
+      var r = parseEnv(envIn.value || DEFAULT_ENV_URL);
+      if (!r.error) { s.host = r.cluster; s.env = r.env; }
+      var m = rbModel(s), notes = [];
+      $('.rb-base', el).innerHTML = r.error ? '<span class="rb-warn">' + esc(r.error) + '</span>'
+        : 'Base URL <code>' + esc(m.base) + '</code>';
+      // Endpoint check against the catalog
+      var hit = decFindEndpoint(s.api, m.path), hint = $('.rb-path-hint', el);
+      if (!hit && !/^\/login(withtid)?$/i.test(m.path)) {
+        var low = m.path.toLowerCase(), best = null, bestD = 99;
+        DEC_CATALOG[s.api].forEach(function (e) { var d = editDistance(low, e.key); if (d < bestD) { bestD = d; best = e; } });
+        hint.innerHTML = '<span class="rb-warn">Not in the ' + DEC_SHORT[s.api] + ' catalog.' + (best && bestD <= Math.min(3, Math.floor(low.length / 4)) ? ' Did you mean <code>' + esc(best.name) + '</code>?' : '') + '</span>';
+      } else hint.textContent = hit && hit.ref ? 'This call needs EstimateREF.' : '';
+      $('.rb-req', el).hidden = !(hit && hit.ref);
+      var bodyHint = $('.rb-body-hint', el);
+      bodyHint.textContent = '';
+      if (m.call && m.call.body !== undefined && s.body.trim()) {
+        try { JSON.parse(s.body); bodyHint.textContent = 'Valid JSON.'; bodyHint.className = 'hint rb-body-hint ok'; }
+        catch (e) { bodyHint.textContent = 'Not valid JSON yet: ' + e.message; bodyHint.className = 'hint rb-body-hint rb-warn'; }
+      }
+      // Notes
+      if (m.call && /^(POST|PUT|DELETE)$/.test(m.call.method)) {
+        notes.push(['warn', m.call.method + ' changes real data. Practice in B2WTechSupport. In a customer’s environment, run it only when they asked for the change.']);
+        if (m.call.method === 'PUT') notes.push(['info', m.api === 'est' ? 'Send the whole record from a fresh GET, with its <code>AntiTamperToken</code> unchanged (<a href="#est-write">question 8</a>).' : 'Send the whole record from a fresh GET, with its <code>ObjectID</code> and <code>RowVersion</code> unchanged (<a href="#create-update-delete">question 15</a>).']);
+      }
+      if (m.call && m.call.method === 'GET' && !m.open && !(s.q.$top || '').trim()) notes.push(['info', 'Without <code>$top</code>, a GET returns up to 100 records. Page with <code>$top</code> and <code>$skip</code>.']);
+      if (m.api !== 'ops' && m.call && !m.open && !s.db.trim()) notes.push(['info', 'Fill in <b>DatabaseName</b>. The output shows a placeholder until you do.']);
+      if (m.api === 'ops' && s.login === 'lwt' && m.login) notes.push(['info', 'LoginWithTID takes a Trimble ID access token from the person’s own Trimble ID sign-in. It returns an Ops token for the linked Ops user.']);
+      if (m.api === 'ops' && s.login === 'client' && m.login) notes.push(['info', 'Client credentials run as the built-in System Administrator, so the call isn’t limited by a user’s security role.']);
+      $('.rb-notes', el).innerHTML = notes.map(function (x) { return '<p class="rb-note ' + x[0] + '">' + icon(x[0] === 'warn' ? 'i-alert' : 'i-info') + '<span>' + x[1] + '</span></p>'; }).join('');
+      // Outputs
+      $('.rb-pm', el).innerHTML = rbPostman(m);
+      $('[data-panel="powershell"] code', el).innerHTML = highlight(rbPowerShell(m), RULES.powershell);
+      $('[data-panel="curl"] code', el).innerHTML = highlight(rbCurl(m), RULES.bash);
+      $('[data-panel="http"] code', el).innerHTML = highlight(rbHttp(m), RULES.http);
+    }
+    var edited = false;   // until someone edits it, the builder follows the guide being read
+    function setApi(api) {
+      if (api === s.api) return;
+      s.api = api; s.path = RB_DEFAULT[api]; pathIn.value = s.path;
+      syncForm(); render();
+    }
+    $('form', el).addEventListener('submit', function (e) { e.preventDefault(); });
+    $('form', el).addEventListener('input', function (e) {
+      var k = e.target.getAttribute('data-rb');
+      if (!k) return;
+      edited = true;
+      if (k.indexOf('q-') === 0) s.q[k.slice(2)] = e.target.value;
+      else if (e.target.type === 'checkbox') s[k] = e.target.checked;
+      else if (k !== 'env') s[k] = e.target.value;
+      if (k === 'path' || k === 'method') syncForm();
+      render();
+    });
+    $('form', el).addEventListener('change', function (e) {
+      var k = e.target.getAttribute('data-rb');
+      if (k === 'login' || k === 'method') { s[k] = e.target.value; syncForm(); render(); }
+    });
+    $('.rb-seg', el).addEventListener('click', function (e) { var b = e.target.closest('[data-api]'); if (b) setApi(b.getAttribute('data-api')); });
+    pathIn.value = s.path;
+    get('q-$top').value = s.q.$top;
+    syncForm();
+    render();
+    builders.push({
+      el: el,
+      // Opened from the top bar: switch to the guide being read, unless the reader has edited it.
+      follow: function (p) { if (!edited) setApi(p); },
+      // Opened from an explorer's Build button: that API and endpoint, ready to fill in.
+      load: function (path, p) {
+        if (p) s.api = p;
+        s.path = path; pathIn.value = path;
+        s.method = rbMethods(s.api, path)[0];
+        edited = true;
+        syncForm(); render();
+      }
+    });
+  }
+  $$('[data-builder]').forEach(mountBuilder);
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-build]');
+    if (!b || !builders.length) return;
+    var view = b.closest('[data-view]');
+    builders[0].load(b.getAttribute('data-build'), view ? view.getAttribute('data-view') : currentProduct());
+    openModal('builder', b);
+    var input = $('[data-rb="path"]', builders[0].el);
+    if (input) { input.focus(); input.select(); }
+  });
 
   /* ---------------------------------------------------------------- quiz */
   var quizItems = $$('.quiz-item'), scoreText = $('#quiz-score-text'), meter = $('#quiz-meter');
