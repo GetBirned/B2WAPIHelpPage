@@ -160,12 +160,22 @@
     var view = target && target.closest('[data-view]');
     return view ? view.getAttribute('data-view') : null;
   }
+  // Usage events for Google Analytics (loaded only on the live site). Never pass anything the reader
+  // typed or pasted: no addresses, tokens, or request contents.
+  function track(name, params) {
+    try { if (window.gtag) window.gtag('event', name, params || {}); } catch (e) { /* analytics blocked */ }
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="downloads/"]');
+    if (a) track('collection_download', { collection: a.getAttribute('href').split('/').pop(), guide: currentProduct() });
+  });
   var switchBtns = $$('.product-switch button');
   function currentProduct() { return root.getAttribute('data-product') || 'ops'; }
   function setProduct(p, opts) {
     opts = opts || {};
     if (!PRODUCTS[p]) p = 'ops';
     var changed = p !== currentProduct();
+    if (changed) track('switch_guide', { guide: p });
     root.setAttribute('data-product', p);
     switchBtns.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-product') === p ? 'true' : 'false'); });
     document.title = PRODUCTS[p].title;
@@ -542,6 +552,7 @@
     if (!(trigger && trigger.closest('.modal'))) modalReturn = trigger || null;
     m.hidden = false;
     openDialog = m;
+    track('open_tool', { tool: name, guide: currentProduct() });
     document.body.style.overflow = 'hidden';
     var input = $('textarea, input', m);
     input.focus();
@@ -2484,8 +2495,9 @@
 
   collectEnvRefs();
   (function () {
-    var fromLink = null;
-    try { fromLink = new URLSearchParams(location.search).get('env'); } catch (e) { /* old browser */ }
+    // The head script takes ?env out of the address (so analytics never sees it) and leaves it here.
+    var fromLink = window.ENV_FROM_LINK || null;
+    if (!fromLink) try { fromLink = new URLSearchParams(location.search).get('env'); } catch (e) { /* old browser */ }
     var start = fromLink || store.get(ENV_KEY);
     // No address, or one that no longer reads: start with the placeholders.
     if (!start || setSiteEnv(start, { force: true })) setSiteEnv('', { force: true });
