@@ -1,18 +1,18 @@
 # B2W API Help Guide
 
-A help guide for the B2W Support Team covering the three B2W cloud APIs. The switch in the header moves between them, and each has its own color scheme:
+The guide and case solver at **https://b2w-api.com** for the three B2W cloud APIs, used by customers, partners, and B2W Support alike. The switch in the header moves between them, and each has its own color scheme:
 
 | API | Address prefix | Color | Guide |
 |---|---|---|---|
-| Ops API | `OpsAPI_` | Trimble Blue | 21 questions plus reference sections (security, FAQ, quiz, cheat sheet, glossary) |
+| Ops API | `OpsAPI_` | Trimble Blue | 21 questions plus reference sections (security, FAQ, cheat sheet, glossary, links) |
 | Estimate API | `EstAPI_` | Green | 11 questions |
 | Management Reporting API | `MRAPI_` | Violet | 10 questions |
 
-Each guide answers questions such as "How do I generate a Bearer Token?" with step-by-step walkthroughs, annotated screenshots, and Postman, PowerShell, cURL, and raw HTTP examples. Examples use the **B2WTechSupport** environment.
+Each guide answers questions such as "How do I generate a Bearer Token?" with step-by-step walkthroughs, annotated screenshots, and Postman, PowerShell, cURL, and raw HTTP examples. Examples fill in with the Ops URL you paste.
 
 ### Environment checker
 
-Paste a customer's Ops address (for example `https://b2w-eus10.b2w.trimble.com/B2WTechSupport`) and the checker builds copyable addresses for all three APIs, then sends a sample `GET /Ping/hello` to each and reports **Up**, **Not found** (wrong environment name), or **No response** (site, IIS, or network down). It is in each guide's "find the URL" question and in the header (the signal icon).
+Paste a customer's Ops address (for example `https://<cluster>.b2w.trimble.com/TheirSite`) and the checker builds copyable addresses for all three APIs, then sends a sample `GET /Ping/hello` to each and reports **Up**, **Not found** (wrong environment name), or **No response** (site, IIS, or network down). It is in each guide's "find the URL" question and in the header (the signal icon).
 
 Browsers can't read replies from another site, and these APIs send no CORS headers, so the checker pairs the ping with a load of each API's Swagger icon (`/doc/favicon-16x16.png`), which only succeeds when that API is serving the environment. It also generates a PowerShell command that shows the raw replies.
 
@@ -40,9 +40,29 @@ The API hexagon logo is built from the B2W logo: the same hexagon, two-tone shad
 
 `brand/` holds the files for use elsewhere: `api-logo-{ops,est,mr}.svg` and 1000 px / 500 px transparent PNGs, compact `api-icon-*.svg` marks for small sizes, the classic red version (`api-logo-red.*`), and `logo-versions.png`, an overview.
 
+### Ops URL and examples
+
+The guide never shows a real environment address. On first open, each guide's intro card just says **Paste your Ops URL**, and every example reads `https://<cluster>.b2w.trimble.com/OpsAPI_<environment>`. Paste an Ops URL into that card (or into the environment checker or the request builder) and every example address, link, copy button, and tool in all three guides fills in with it, along with the Ops, Estimate, and MR API addresses built from it. A notice at the top of the page shows which environment is in use, with **Clear** to go back to the placeholders. Links that still hold placeholders ask for the Ops URL instead of opening.
+
+The choice is remembered in your browser. **Copy a link with this environment** gives a link like `…/B2W-API-Help-Guide.html?env=https%3A%2F%2F<cluster>.b2w.trimble.com%2FTheirSite`, which opens the guide already filled in.
+
+Keep it that way when editing: write example addresses with the `<cluster>.b2w.trimble.com` and `<environment>` placeholders (`&lt;cluster&gt;` and `&lt;environment&gt;` in `index.html`), refer to the support team's own environment as "our test environment", and blur any address that shows up in a new screenshot. Internal-only tools aren't mentioned or shown.
+
+### Postman collections and support contact
+
+Each guide's **Download the … collection** button (and the header's **Collection** link) downloads that API's Postman collection as a JSON file from `downloads/`. Every collection goes through `tools/clean-collection.js` first, which strips the exporting Postman account's ID, blanks credential variables, resets any real server address to a placeholder, drops saved responses, and refuses to write the file if a token or a real B2W address is still inside:
+
+```
+node tools/clean-collection.js "source-material/B2W Ops API.postman_collection.json" src/downloads/B2W-Ops-API.postman_collection.json
+```
+
+Keep raw exports in `source-material/` (ignored by git); only the cleaned copies in `src/downloads/` are committed and published.
+
+B2W Support is support_b2w@trimble.com and +1 (888) 390-8822. The footer (`#contact`) lists both, every troubleshooting section ends with a "Still stuck? Contact B2W Support" box, and fixes that need B2W's help link there.
+
 ## Use it
 
-Open `dist/B2W-API-Help-Guide.html` in any browser. It is one self-contained file (styles, scripts, and screenshots are embedded), so it can be shared as-is. Printable versions:
+Open https://b2w-api.com, or `dist/index.html` from disk. The page is self-contained (styles, scripts, and screenshots are embedded); `dist/B2W-API-Help-Guide.html` is the same page under a name that reads well as a shared file, and the download buttons need `dist/downloads/` next to it. Printable versions:
 
 - `dist/B2W-Ops-API-Guide.pdf`
 - `dist/B2W-Estimate-API-Guide.pdf`
@@ -55,9 +75,9 @@ Links that open a specific guide or question directly:
 
 ## Host it
 
-The repo deploys to Railway as-is. The `Staticfile` in the root tells Railpack to serve `dist/` as a static site (with Caddy), and `dist/index.html` forwards the site root to the guide, keeping any `#question` link. There is no build step on Railway: `dist/` is committed, so run `python build.py` and commit before deploying a change.
+The repo deploys to Railway as-is, at https://www.b2w-api.com (GoDaddy forwards the bare b2w-api.com there, since its DNS can't point the bare domain at Railway). The `Staticfile` in the root tells Railpack to serve `dist/` as a static site (with Caddy): `index.html` is the guide, `downloads/` holds the Postman collections, and `og-image.png` is the picture link previews show. There is no build step on Railway: `dist/` is committed, so run `python build.py` (and `node tools/export-pdf.js` when the content changes) and commit before deploying a change.
 
-Railway gives the service a public URL, so anyone with the link can open the guide.
+The site is public. Before publishing anything, check that it has no environment addresses, internal links, credentials, or personal details (see the sections above and below).
 
 ## Edit it
 
@@ -68,12 +88,14 @@ src/
   styles.css     design tokens at the top, including the per-API color schemes
   fields.js      generated field lists for the $filter helper (see below)
   app.js         switcher, search, tabs, environment checker, error decoder, request builder, token inspector,
-                 endpoint explorers, troubleshooter, quiz
+                 endpoint explorers, troubleshooter
   images/        redacted, annotated screenshots (WebP) and the per-guide tab icons
+  downloads/     the cleaned Postman collections the guide offers for download
 build.py         bundles src/ into dist/B2W-API-Help-Guide.html (plus dist/index.html for hosting)
 Staticfile       tells Railway's Railpack to serve dist/ as a static site
 tools/
   export-pdf.js  prints each guide to its own PDF with headless Chrome or Edge
+  clean-collection.js  cleans a Postman export for src/downloads/
   sync-fields.js rebuilds src/fields.js from each API's published OpenAPI document
 brand/           the API logo in each guide's color (SVG and PNG)
 source-material/ (not in git) original notes, slides, and raw screenshots
@@ -92,14 +114,14 @@ To preview while editing, open `src/index.html` directly, or serve `dist/` with 
 
 Question IDs in the Estimate guide start with `est-` and in the Management Reporting guide with `mr-`; the page uses those prefixes to open the right guide from a link. Endpoint lists for the explorers live in `app.js` (`OPS_EP`, `EST_EP`, `MR_EP`).
 
-The `$filter` helper's field lists come from the B2WTechSupport OpenAPI documents. After a B2W release, refresh them with `node tools/sync-fields.js` (it needs network access to b2w-eus10.b2w.trimble.com), then run `python build.py`.
+The `$filter` helper's field lists come from our test environment's OpenAPI documents (`tools/sync-fields.js` holds its address; it isn't part of the built page). After a B2W release, refresh them with `node tools/sync-fields.js` (it needs network access to our test environment), then run `python build.py`.
 
 ## Sources
 
-- **Ops API:** the Ops API Support Training (slides and walkthrough notes) and the B2WTechSupport API catalog.
-- **Estimate and Management Reporting APIs:** their B2WTechSupport API documentation (`/doc/index.html`, `/doc/v1/EstAPI.json`, `/doc/v2/MRAPI.json`) and the official Postman collections linked from it.
-- Live responses (ping, login errors, version) were checked against B2WTechSupport on October 2, 2026.
+- **Ops API:** B2W's Ops API training material and our test environment's API catalog.
+- **Estimate and Management Reporting APIs:** their API documentation in our test environment (`/doc/index.html`, `/doc/v1/EstAPI.json`, `/doc/v2/MRAPI.json`) and the official Postman collections linked from it.
+- Live responses (ping, login errors, version) were checked against our test environment on October 2, 2026.
 
 ## Screenshots and secrets
 
-Every screenshot in `src/images/` has tokens, secrets, TID IDs, and client IDs masked. The originals in `source-material/` do not, which is why that folder is ignored by git. Do not commit raw screenshots, and check any new screenshot for credentials before adding it.
+Every screenshot in `src/images/` has tokens, secrets, TID IDs, client IDs, environment addresses, and personal names and emails masked or blurred. The originals in `source-material/` do not, which is why that folder is ignored by git. Do not commit raw screenshots, and check any new screenshot for credentials before adding it.

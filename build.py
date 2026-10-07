@@ -1,20 +1,30 @@
-"""Bundle the help site into one self-contained HTML file.
+"""Build the help site into dist/.
 
-Reads src/ (index.html, styles.css, fields.js, app.js, images/) and writes
-dist/B2W-API-Help-Guide.html with the CSS, JS, and every image inlined, so the
-result can be shared as a single file. Standard library only.
+Reads src/ (index.html, styles.css, fields.js, app.js, images/, downloads/) and writes:
+
+    dist/index.html                 the guide, served at https://www.b2w-api.com/
+    dist/B2W-API-Help-Guide.html    the same page, under a name that reads well as a shared file
+    dist/downloads/*.json           the Postman collections the guide's buttons download
+    dist/og-image.png               the picture shown when someone shares a link to the site
+
+The page has its CSS, JS, and every image inlined, so it also works as a single file opened from
+disk (the download buttons need dist/downloads next to it). Standard library only.
 
     python build.py
 """
 import base64
 import mimetypes
 import re
+import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
-OUT = ROOT / "dist" / "B2W-API-Help-Guide.html"
-INDEX = ROOT / "dist" / "index.html"
+DIST = ROOT / "dist"
+OUT = DIST / "B2W-API-Help-Guide.html"
+INDEX = DIST / "index.html"
+DOWNLOADS = "downloads"
+OG_IMAGE = ROOT / "brand" / "api-logo-ops-1000.png"
 
 mimetypes.add_type("image/webp", ".webp")
 
@@ -41,28 +51,33 @@ def main() -> None:
     html = re.sub(r'(src|href|data-icon-\w+)="(images/[^"]+)"', swap, html)
 
     # Check the markup (before the script is inlined) for any other local file references.
-    leftovers = set(re.findall(r'(?:src|href)="(?!https?:|data:|#|mailto:)([^"]+)"', html)) - {"styles.css", "fields.js", "app.js"}
+    refs = set(re.findall(r'(?:src|href)="(?!https?:|data:|#|mailto:|tel:)([^"]+)"', html)) - {"styles.css", "fields.js", "app.js"}
+    downloads = {r for r in refs if r.startswith(DOWNLOADS + "/")}
+    leftovers = refs - downloads
     if leftovers:
         raise SystemExit(f"Unresolved local references: {sorted(leftovers)}")
+    missing = sorted(d for d in downloads if not (SRC / d).exists())
+    if missing:
+        raise SystemExit(f"Download buttons point at files that aren't in src/: {missing}")
 
     html = html.replace('<link rel="stylesheet" href="styles.css">', f"<style>\n{css}\n</style>")
     html = html.replace('<script src="fields.js"></script>', f"<script>\n{fields}\n</script>")
     html = html.replace('<script src="app.js"></script>', f"<script>\n{js}\n</script>")
 
-    OUT.parent.mkdir(exist_ok=True)
+    DIST.mkdir(exist_ok=True)
     OUT.write_text(html, encoding="utf-8")
-    # When dist/ is served as a website (see Staticfile), the site root forwards to the guide,
-    # keeping any #question link.
-    INDEX.write_text(
-        '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
-        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        '<title>B2W API Help Guide</title>\n'
-        f'<script>location.replace("{OUT.name}" + location.hash);</script>\n'
-        f'<meta http-equiv="refresh" content="0; url={OUT.name}">\n'
-        '</head>\n<body>\n'
-        f'<p><a href="{OUT.name}">Open the B2W API Help Guide</a></p>\n'
-        '</body>\n</html>\n', encoding="utf-8")
-    print(f"Inlined {len(used)} images -> {OUT.relative_to(ROOT)} ({OUT.stat().st_size / 1024:,.0f} KB)")
+    INDEX.write_text(html, encoding="utf-8")
+
+    # Downloads: replace the folder so a removed collection doesn't linger on the site.
+    shutil.rmtree(DIST / DOWNLOADS, ignore_errors=True)
+    (DIST / DOWNLOADS).mkdir()
+    for d in sorted(downloads):
+        shutil.copy2(SRC / d, DIST / d)
+    if OG_IMAGE.exists():
+        shutil.copy2(OG_IMAGE, DIST / "og-image.png")
+
+    print(f"Inlined {len(used)} images -> {OUT.relative_to(ROOT)} and {INDEX.relative_to(ROOT)} ({OUT.stat().st_size / 1024:,.0f} KB each)")
+    print(f"Copied {len(downloads)} downloads -> {DOWNLOADS}/: " + ", ".join(Path(d).name for d in sorted(downloads)))
 
 
 if __name__ == "__main__":

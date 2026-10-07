@@ -143,14 +143,14 @@
   $$('.product-view h1').forEach(function (h) { h.setAttribute('tabindex', '-1'); });
 
   /* ------------------------------------------------------ API switcher */
-  var HOST = 'https://b2w-eus10.b2w.trimble.com/';
+  var HOST = 'https://<cluster>.b2w.trimble.com/';
   var PRODUCTS = {
-    ops: { title: 'B2W Ops API Help Guide', hash: '', docs: HOST + 'OpsAPI_B2WTechSupport/doc/index.html',
-      collection: 'https://drive.google.com/file/d/1fJfhAF0z383mx1Io5qvFcJEHLsStrS9R/view?usp=sharing' },
-    est: { title: 'B2W Estimate API Help Guide', hash: 'estimate-api', docs: HOST + 'EstAPI_B2WTechSupport/doc/index.html',
-      collection: HOST + 'EstAPI_B2WTechSupport/Documentation/EstAPI.postman_collection.json' },
-    mr: { title: 'B2W Management Reporting API Help Guide', hash: 'reporting-api', docs: HOST + 'MRAPI_B2WTechSupport/doc/index.html',
-      collection: HOST + 'MRAPI_B2WTechSupport/Documentation/MRAPI.postman_collection.json' }
+    ops: { title: 'B2W Ops API Help Guide', hash: '', docs: HOST + 'OpsAPI_<environment>/doc/index.html',
+      collection: 'downloads/B2W-Ops-API.postman_collection.json' },
+    est: { title: 'B2W Estimate API Help Guide', hash: 'estimate-api', docs: HOST + 'EstAPI_<environment>/doc/index.html',
+      collection: 'downloads/B2W-Estimate-API.postman_collection.json' },
+    mr: { title: 'B2W Management Reporting API Help Guide', hash: 'reporting-api', docs: HOST + 'MRAPI_<environment>/doc/index.html',
+      collection: 'downloads/B2W-Management-Reporting-API.postman_collection.json' }
   };
   var productFromHash = { 'estimate-api': 'est', 'reporting-api': 'mr', 'ops-api': 'ops' };
   // Which guide a link like #bearer-token, #est-login, or #mr-headers belongs to.
@@ -172,8 +172,8 @@
     var icon = $('#favicon');
     if (icon) icon.href = icon.getAttribute('data-icon-' + p);
     $('#foot-name').textContent = PRODUCTS[p].title;
-    $('#hdr-docs').href = PRODUCTS[p].docs;
-    $('#hdr-collection').href = PRODUCTS[p].collection;
+    $('#hdr-docs').href = envSwap(PRODUCTS[p].docs);
+    $('#hdr-collection').href = envSwap(PRODUCTS[p].collection);
     sections = $$('.product-view[data-view="' + p + '"] .q[id]');
     if (changed && filter.value) { filter.value = ''; }
     runFilter();
@@ -259,6 +259,7 @@
       [/^(?:GET|POST|PUT|DELETE|PATCH)\b/my, 'kw'],
       [/HTTP\/1\.1/y, 'c'],
       [/^[A-Za-z][\w-]*(?=:)/my, 'k'],
+      [/<cluster>\.b2w\.trimble\.com/y, 'v'],   // one piece, so the page can fill in the host
       [/<[^>\n]+>/y, 'v'],
       [/\$\w+/y, 'kw'],
       [/"(?:[^"\\\n]|\\.)*"(?=\s*:)/y, 'k'],
@@ -354,7 +355,7 @@
   if (savedTab) selectTab('client', savedTab, false);
 
   /* ------------------------------------------------ environment checker */
-  // Paste a customer's Ops address; get all three API addresses and a live check of each.
+  // Paste an Ops address; get all three API addresses and a live check of each.
   // Browsers can't read replies from another site (the APIs send no CORS headers), so each check
   // sends GET /Ping/hello (any answer proves the server is reachable) and loads the API's Swagger
   // icon (it loads only when that API is serving this environment; a wrong name returns 404).
@@ -363,9 +364,9 @@
     { key: 'est', name: 'Estimate API', prefix: 'EstAPI_' },
     { key: 'mr', name: 'Management Reporting API', prefix: 'MRAPI_' }
   ];
-  var DEFAULT_ENV_URL = 'https://b2w-eus10.b2w.trimble.com/B2WTechSupport';
+  var DEFAULT_ENV_URL = 'https://<cluster>.b2w.trimble.com/<environment>';   // shown as an example only
   var CHECK_TIMEOUT = 12000;
-  var chk = { input: DEFAULT_ENV_URL, cluster: 'b2w-eus10.b2w.trimble.com', env: 'B2WTechSupport', error: '', results: {}, runId: 0 };
+  var chk = { input: '', cluster: '<cluster>.b2w.trimble.com', env: '<environment>', unset: true, error: '', results: {}, runId: 0 };
   var checkers = [];
 
   function parseEnv(raw) {
@@ -373,10 +374,10 @@
     if (!v) return { error: 'Paste a B2W address, such as ' + DEFAULT_ENV_URL + '.' };
     var u;
     try { u = new URL(/^https?:\/\//i.test(v) ? v : 'https://' + v); } catch (e) { return { error: 'That doesn’t look like a web address. Paste the full address, such as ' + DEFAULT_ENV_URL + '.' }; }
-    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(u.hostname)) return { error: 'Include the host, such as b2w-eus10.b2w.trimble.com, before the environment name.' };
+    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(u.hostname)) return { error: 'Include the host, which ends in .b2w.trimble.com, before the environment name.' };
     var first = u.pathname.split('/').filter(Boolean)[0] || '';
     var env = decodeURIComponent(first).replace(/^(opsapi|estapi|mrapi)_/i, '');
-    if (!env || !/^[A-Za-z0-9_-]+$/.test(env)) return { error: 'Add the environment name after the host, for example …/B2WTechSupport.' };
+    if (!env || !/^[A-Za-z0-9_-]+$/.test(env)) return { error: 'Add the environment name after the host, for example …/YourSite.' };
     return { cluster: u.hostname.toLowerCase(), env: env };
   }
   function apiUrl(a) { return 'https://' + chk.cluster + '/' + a.prefix + chk.env; }
@@ -406,7 +407,7 @@
   }
 
   function runChecks() {
-    if (chk.error) return;
+    if (chk.error || chk.unset) return;
     var run = ++chk.runId;
     APIS.forEach(function (a) { chk.results[a.key] = { state: 'checking' }; });
     renderCheckers();
@@ -451,9 +452,11 @@
       summaryCls = up === APIS.length ? 'ok' : 'warn';
     }
     checkers.forEach(function (c) {
-      if (chk.error) {
-        c.parsed.className = 'chk-parsed warn';
-        c.parsed.textContent = chk.error;
+      var ps = $('pre code', c.more);
+      if (ps) ps.innerHTML = highlight(powershellFor(), RULES.powershell);
+      if (chk.error || chk.unset) {
+        c.parsed.className = chk.unset ? 'chk-parsed' : 'chk-parsed warn';
+        c.parsed.textContent = chk.unset ? 'Paste the Ops URL to build all three API addresses and check each one.' : chk.error;
         c.rows.innerHTML = '';
         c.summary.textContent = '';
         return;
@@ -476,13 +479,13 @@
       }).join('');
       c.summary.className = 'chk-summary ' + summaryCls;
       c.summary.textContent = summary;
-      var ps = $('pre code', c.more);
-      if (ps) ps.innerHTML = highlight(powershellFor(), RULES.powershell);
     });
   }
   function setEnvInput(value, from) {
     chk.input = value;
-    var r = parseEnv(value);
+    // Nothing entered yet: the checker waits for an address instead of showing an error.
+    chk.unset = !String(value || '').trim();
+    var r = chk.unset ? { cluster: '<cluster>.b2w.trimble.com', env: '<environment>' } : parseEnv(value);
     chk.error = r.error || '';
     if (!r.error) {
       if (r.cluster !== chk.cluster || r.env !== chk.env) { chk.results = {}; chk.runId++; }
@@ -499,10 +502,10 @@
         '<div class="tool-head"><span class="tool-tag">Tool</span><h4>Environment checker</h4><span class="meta">Builds all three API addresses and checks each one</span></div>' +
         '<div class="tool-body">' +
           '<form class="chk-form" novalidate>' +
-            '<label for="' + id + '">Customer’s Ops address</label>' +
+            '<label for="' + id + '">Ops address</label>' +
             '<div class="chk-input"><input id="' + id + '" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="' + DEFAULT_ENV_URL + '">' +
             '<button class="btn btn-primary" type="submit">' + icon('i-signal') + 'Check</button></div>' +
-            '<p class="chk-hint">Paste the Ops site, any API address, or a Swagger link. Pasting runs the check right away.</p>' +
+            '<p class="chk-hint">Paste the Ops site, any API address, or a Swagger link. Pasting runs the check right away, and every example in the guide switches to that environment.</p>' +
           '</form>' +
           '<p class="chk-parsed" aria-live="polite"></p>' +
           '<div class="chk-rows"></div>' +
@@ -517,10 +520,11 @@
       '</div>';
     var c = { el: el, input: $('input', el), rows: $('.chk-rows', el), parsed: $('.chk-parsed', el), summary: $('.chk-summary', el), more: $('.chk-more-body', el) };
     c.input.value = chk.input;
-    $('form', el).addEventListener('submit', function (e) { e.preventDefault(); setEnvInput(c.input.value, c); runChecks(); });
+    $('form', el).addEventListener('submit', function (e) { e.preventDefault(); setEnvInput(c.input.value, c); runChecks(); setSiteEnv(c.input.value); });
+    c.input.addEventListener('change', function () { setSiteEnv(c.input.value); });
     c.input.addEventListener('input', function () { setEnvInput(c.input.value, c); });
     c.input.addEventListener('paste', function () {
-      setTimeout(function () { setEnvInput(c.input.value, c); if (!chk.error) runChecks(); }, 0);
+      setTimeout(function () { setEnvInput(c.input.value, c); if (!chk.error) { runChecks(); setSiteEnv(c.input.value); } }, 0);
     });
     checkers.push(c);
   }
@@ -544,7 +548,7 @@
     input.select();
     if (name === 'checker') {
       var anyChecked = APIS.some(function (a) { return chk.results[a.key]; });
-      if (!anyChecked && !chk.error) runChecks();
+      if (!anyChecked && !chk.error && !chk.unset) runChecks();
     }
     if (name === 'builder' && builders.length && !(trigger && trigger.hasAttribute('data-build'))) builders[0].follow(currentProduct());
   }
@@ -785,7 +789,7 @@
   /* ------------------------------------------------------ troubleshooter */
   var TS = {
     start: {
-      q: 'What does the customer’s request or response look like?',
+      q: 'What does the request or response look like?',
       help: 'Diagnostic question 1: which API surface is this?',
       options: [
         { label: 'JSON, or an address that contains OpsAPI_', next: 'ping', tag: 'Ops API (JSON)' },
@@ -796,7 +800,7 @@
       q: 'Open {baseUrl}/Ping/hello in a browser. What comes back?',
       help: 'Diagnostic question 2: base URL and connectivity. Ping needs no login.',
       options: [
-        { label: 'The server name and “hello”, such as (b2w-eus10-iis2) hello|', next: 'method', tag: 'Ping works' },
+        { label: 'The server name and “hello”, such as (server-name) hello|', next: 'method', tag: 'Ping works' },
         { label: 'An HTML “404” error page', next: 'r_badurl', tag: 'Ping 404' },
         { label: 'A timeout or “connection refused”', next: 'r_down', tag: 'No response' }
       ]
@@ -838,9 +842,9 @@
         { label: '500 Internal Server Error', next: 'r_500', tag: 'Data 500' }
       ]
     },
-    r_soap: { sev: 'info', title: 'This is the legacy SOAP Web Services, not the Ops API', body: '<p>XML message bodies and <code>.asmx</code> addresses belong to the older SOAP Web Services. They don’t map to Ops API 2.0 endpoints, so handle it as a Web Services ticket.</p><p>Where it makes sense, recommend moving the integration to the Ops API.</p>', link: ['#what-is-ops-api', 'Ops API vs. legacy Web Services'] },
+    r_soap: { sev: 'info', title: 'This is the legacy SOAP Web Services, not the Ops API', body: '<p>XML message bodies and <code>.asmx</code> addresses belong to the older SOAP Web Services. They don’t map to Ops API 2.0 endpoints, so use the Web Services documentation and support path for it.</p><p>Where it makes sense, move the integration to the Ops API.</p>', link: ['#what-is-ops-api', 'Ops API vs. legacy Web Services'] },
     r_badurl: { sev: 'warn', title: 'The address is wrong', body: '<p>The server answered, so it is up, but that path doesn’t exist. Usually the environment name is misspelled or the <code>OpsAPI_</code> prefix is missing.</p><p>Rebuild the URL as <code>https://{cluster}/OpsAPI_{environment}</code> and try <code>/Ping/hello</code> again.</p>', link: ['#find-api-url', 'Build the URL'] },
-    r_down: { sev: 'danger', title: 'The site, IIS, or the network is down', body: '<p>When Ping gets no answer at all, the API site, the IIS web server, or the network is down entirely.</p><ul><li>Check the customer’s network connectivity and routing, including firewalls, proxies, and DNS.</li><li>Check the IIS service host status.</li><li>Escalate if the site itself is down.</li></ul>', link: ['#connectivity', 'Connectivity checks'] },
+    r_down: { sev: 'danger', title: 'The site, IIS, or the network is down', body: '<p>When Ping gets no answer at all, the API site, the IIS web server, or the network is down entirely.</p><ul><li>Check network connectivity and routing, including firewalls, proxies, and DNS.</li><li>Check the IIS service host status.</li><li>If the site itself is down, <a href="#contact">contact B2W Support</a>.</li></ul>', link: ['#connectivity', 'Connectivity checks'] },
     r_unknown: { sev: 'info', title: 'Find out the sign-in method first', body: '<p>Look at the headers on their login call:</p><ul><li><code>tiduuid</code> + <code>apiSecret</code>: TID UUID and User API Secret</li><li><code>clientId</code> + <code>clientSecret</code>: client credentials</li><li><code>userName</code> + <code>password</code>: username and password</li><li>A call to <code>/LoginWithTID</code>: a Trimble ID token</li></ul><p>Then go back one step and pick that method.</p>', link: ['#login-methods', 'Login methods'] },
     r_login400: { sev: 'warn', title: 'No credentials in the headers', body: '<p><code>/Login</code> only reads credentials from HTTP headers. Without a complete pair it returns 400 and <code>"Authentication information must be specified in the request header"</code>.</p><ul><li>Move the credentials out of the URL or body and into headers.</li><li>Check the header names exactly: <code>tiduuid</code>/<code>apiSecret</code>, <code>clientId</code>/<code>clientSecret</code>, or <code>userName</code>/<code>password</code>.</li><li>With a username, use the format <code>DOMAIN\\user</code> or <code>user@domain</code>.</li></ul>', link: ['#login-methods', 'How /Login reads headers'] },
     r_login401_tid: { sev: 'warn', title: 'The TID ID or User API Secret doesn’t match', body: '<p>Re-copy both values from the user’s <strong>User API Secret</strong> dialog. Ask whether someone generated a new secret recently; anything using the old secret needs the new value.</p>', link: ['#find-tid-secret', 'Find the TID UUID and secret'] },
@@ -848,11 +852,11 @@
     r_login401_user: { sev: 'warn', title: 'Windows rejected the password', body: '<p>Ops checks username-and-password logins against the Windows domain controller, and it refused this one. Confirm the password, and that the account isn’t locked or expired.</p><p>This method is being retired, so it is a good moment to move the integration to TID or client credentials.</p>', link: ['#login-methods', 'Login methods'] },
     r_login401_lwt: { sev: 'warn', title: 'The Trimble ID token is missing, invalid, or expired', body: '<p>LoginWithTID needs a current Trimble ID access token as its bearer token. Have the person sign in to Trimble ID again for a fresh token, then retry.</p>', link: ['#login-methods', 'LoginWithTID'] },
     r_login404_tid: { sev: 'warn', title: 'No Ops user matches those credentials', body: '<p>Check that the user exists and is active in Ops, and that their <strong>TID / Mobile E-mail Address</strong> is filled in on the User View page.</p>', link: ['#find-tid-secret', 'User View'] },
-    r_login404_client: { sev: 'danger', title: 'The built-in System Administrator record is missing', body: '<p>The client credentials were valid, but Ops couldn’t find the built-in System Administrator record to issue a token for. Escalate this one.</p>', link: ['#find-client-id', 'Client credentials'] },
+    r_login404_client: { sev: 'danger', title: 'The built-in System Administrator record is missing', body: '<p>The client credentials were valid, but Ops couldn’t find the built-in System Administrator record to issue a token for. <a href="#contact">Contact B2W Support</a>.</p>', link: ['#find-client-id', 'Client credentials'] },
     r_login404_user: { sev: 'warn', title: 'The account isn’t set up as an Ops user', body: '<p>No Ops user matches that Windows account name. Check the Ops user record and its Windows account name.</p>', link: ['#login-methods', 'Username and password details'] },
     r_login404_lwt: { sev: 'warn', title: 'The Trimble user isn’t linked to an Ops user', body: '<p>Trimble accepted and authenticated the person, but no Ops user matches their Trimble ID or mobile email address.</p><ul><li>Fix the link on the Ops user record: <strong>TID / Mobile E-mail Address</strong>.</li><li><strong>Do not reset the password.</strong> The Trimble sign-in is already valid.</li></ul>', link: ['#common-errors', 'LoginWithTID 404'] },
-    r_login406: { sev: 'danger', title: 'The System Administrator account name is in an unexpected format', body: '<p>The catalog documents 406 as “SysAdmin WindowsAccountName is not in the expected format”. Capture the details and escalate.</p>', link: ['#status-codes', 'Status codes'] },
-    r_500: { sev: 'danger', title: 'An unexpected internal Ops error', body: '<p>Capture the request with secrets removed, the full response body, and the date, time, and time zone, then escalate. The API logs server-side exceptions in its Logs folder.</p>', link: ['#work-a-ticket', 'What to collect'] },
+    r_login406: { sev: 'danger', title: 'The System Administrator account name is in an unexpected format', body: '<p>The catalog documents 406 as “SysAdmin WindowsAccountName is not in the expected format”. Capture the details and <a href="#contact">contact B2W Support</a>.</p>', link: ['#status-codes', 'Status codes'] },
+    r_500: { sev: 'danger', title: 'An unexpected internal Ops error', body: '<p>Capture the request with secrets removed, the full response body, and the date, time, and time zone, then <a href="#contact">contact B2W Support</a>. The API logs server-side exceptions in its Logs folder.</p>', link: ['#work-a-ticket', 'What to collect'] },
     r_data401: { sev: 'warn', title: 'The bearer token is missing or expired', body: '<p>Login worked, so the credentials are fine. The data call isn’t carrying a valid token.</p><ul><li>Check the header reads exactly <code>Authorization: Bearer &lt;AccessToken&gt;</code>.</li><li>Tokens last 1 day, and a newer login retires the old one. Log in again and use the latest token.</li></ul>', link: ['#use-token', 'Using the token'] },
     r_403: { sev: 'warn', title: 'The security role lacks the API permission', body: '<p>The caller is known but not allowed. The response’s InternalMessage names the missing privilege, such as <code>ApiEmployee.Read</code>.</p><ul><li>Open the user’s security role and find the API section and that area’s row.</li><li>Grant the action they need: View for GET, Create for POST, Edit for PUT, Delete for DELETE.</li><li>Check their license too. A read-only license can’t make changes.</li></ul>', link: ['#fix-403', 'Fix a 403'] },
     r_data400: { sev: 'warn', title: 'The request is malformed', body: '<p>Check the query and the body against Swagger.</p><ul><li>OData text values need single quotes, for example <code>$filter=LastName eq \'Newman\'</code>.</li><li>Field names must match the catalog exactly.</li></ul>', link: ['#filter-page', 'OData syntax'] },
@@ -861,7 +865,7 @@
     r_422: { sev: 'warn', title: 'The body isn’t a valid record', body: '<p>A required field may be missing, a field name misspelled, or the JSON malformed. Compare it with a GET of an existing record or with <code>/schema</code>.</p>', link: ['#create-update-delete', 'Creating a record'] },
     r_100: { sev: 'ok', title: 'That is the page size, not missing data', body: '<p>Each GET returns at most 100 records. Page with <code>$top=100&amp;$skip=100</code>, then <code>$skip=200</code>, until a page comes back with fewer than 100.</p>', link: ['#filter-page', 'Paging'] }
   };
-  var sevLabel = { ok: 'Not an error', info: 'Likely cause', warn: 'Likely cause', danger: 'Likely cause · escalate if needed' };
+  var sevLabel = { ok: 'Not an error', info: 'Likely cause', warn: 'Likely cause', danger: 'Likely cause · contact B2W Support if needed' };
   var tsStage = $('#ts-stage'), tsTrail = $('#ts-trail'), tsStep = $('#ts-step');
   var ts = { path: ['start'], tags: [], method: null, methods: [] };
   function tsRender(focus) {
@@ -1042,7 +1046,7 @@
     c.html404 = /File or directory not found|HTTP Error 404|The resource you are looking for has been removed|<title>\s*404/i.test(t);
 
     // Address: an API URL tells us the API, environment, and path.
-    var u = /https?:\/\/([a-z0-9-]+(?:\.[a-z0-9-]+)*)(?::\d+)?\/(OpsAPI|EstAPI|MRAPI)_([^\/\s?#"'<>\\]+)([^\s?#"'<>\\]*)/i.exec(t);
+    var u = /https?:\/\/([a-z0-9<>-]+(?:\.[a-z0-9-]+)*)(?::\d+)?\/(OpsAPI|EstAPI|MRAPI)_([^\/\s?#"'\\]+)([^\s?#"'<>\\]*)/i.exec(t);
     var raw = null, urlApi = null;
     if (u) {
       urlApi = { opsapi: 'ops', estapi: 'est', mrapi: 'mr' }[u[2].toLowerCase()];
@@ -1050,7 +1054,7 @@
       raw = u[4];
     } else {
       // The Ops website's address used as if it were the API
-      var np = /https?:\/\/([a-z0-9-]+\.b2w\.trimble\.com)\/([^\/\s?#"'<>\\]+)(\/[^\s?#"'<>\\]*)?/i.exec(t);
+      var np = /https?:\/\/([a-z0-9<>-]+\.b2w\.trimble\.com)\/([^\/\s?#"'\\]+)(\/[^\s?#"'<>\\]*)?/i.exec(t);
       if (np && !/^(?:doc|Documentation)$/i.test(np[2])) {
         c.site = { host: np[1], env: np[2] };
         c.noPrefix = { host: np[1], env: np[2], rest: (np[3] || '').replace(/\/$/, '') };
@@ -1117,7 +1121,7 @@
 
   // Cards for causes the troubleshooter doesn't already cover
   var LOGIN401_ANY = { sev: 'warn', title: 'Login rejected the credentials', body: '<p>What a 401 from <code>/Login</code> means depends on how they sign in:</p><ul><li><code>tiduuid</code> + <code>apiSecret</code>: the TID ID or User API Secret is wrong.</li><li><code>clientId</code> + <code>clientSecret</code>: they don’t match Ops system settings.</li><li><code>userName</code> + <code>password</code>: Windows rejected the password.</li></ul><p>Re-copy the values from their source and ask whether anyone generated a new secret or key recently.</p>', link: ['#login-methods', 'Login methods'] };
-  var LOGIN404_ANY = { sev: 'warn', title: 'No Ops user matches the credentials', body: '<p>What a 404 from <code>/Login</code> means depends on how they sign in:</p><ul><li>TID UUID: the user isn’t active in Ops, or their <strong>TID / Mobile E-mail Address</strong> is empty on the User View page.</li><li>Username: no Ops user has that Windows account name.</li><li>Client credentials: the built-in System Administrator record is missing. Escalate this one.</li></ul>', link: ['#login-methods', 'Login methods'] };
+  var LOGIN404_ANY = { sev: 'warn', title: 'No Ops user matches the credentials', body: '<p>What a 404 from <code>/Login</code> means depends on how they sign in:</p><ul><li>TID UUID: the user isn’t active in Ops, or their <strong>TID / Mobile E-mail Address</strong> is empty on the User View page.</li><li>Username: no Ops user has that Windows account name.</li><li>Client credentials: the built-in System Administrator record is missing. <a href="#contact">Contact B2W Support</a>.</li></ul>', link: ['#login-methods', 'Login methods'] };
   var ANTITAMPER = { sev: 'warn', title: 'The AntiTamperToken was changed or left out', body: '<p>A PUT must send back the whole record with its <code>AntiTamperToken</code> exactly as the GET returned it.</p><ol><li>GET the record again.</li><li>Change only the fields you need.</li><li>PUT the whole record back with the new AntiTamperToken untouched.</li></ol>', link: ['#est-write', 'Updating a record'] };
   var DEC_ACTION = { read: 'View', view: 'View', get: 'View', create: 'Create', add: 'Create', insert: 'Create', post: 'Create',
     update: 'Edit', edit: 'Edit', modify: 'Edit', write: 'Edit', put: 'Edit', delete: 'Delete', remove: 'Delete' };
@@ -1129,16 +1133,16 @@
   }
   function downCard(api) {
     if (api === 'ops') return TS.r_down;
-    return { sev: 'danger', title: 'The site, IIS, or the network is down', body: '<p>No answer at all means the request never got a reply.</p><ul><li>Check the customer’s network: firewall, proxy, and DNS.</li><li>On-premises: check that IIS and ' + DEC_POOL[api] + ' application pool are running.</li><li>Cloud: escalate if <code>/Ping/hello</code> fails from more than one network.</li></ul>', link: decLink('connect', api) };
+    return { sev: 'danger', title: 'The site, IIS, or the network is down', body: '<p>No answer at all means the request never got a reply.</p><ul><li>Check the network: firewall, proxy, and DNS.</li><li>On-premises: check that IIS and ' + DEC_POOL[api] + ' application pool are running.</li><li>Cloud: <a href="#contact">contact B2W Support</a> if <code>/Ping/hello</code> fails from more than one network.</li></ul>', link: decLink('connect', api) };
   }
   function estData401(api) {
-    return { sev: 'warn', title: 'The token or the client values were rejected', body: '<p>Data calls return 401 for two reasons:</p><ul><li><strong>The token.</strong> The <code>Authorization</code> header is missing or misspelled, or the token expired. Log in again and send <code>Authorization: Bearer &lt;AccessToken&gt;</code>.</li><li><strong>Client ID Security.</strong> When it is on, every call also needs <code>ClientID</code> and <code>ClientSecret</code> headers that match the customer’s settings.</li></ul><p>Use a token from this API’s own <code>/Login</code>, in the same environment.</p>', link: decLink('headers', api) };
+    return { sev: 'warn', title: 'The token or the client values were rejected', body: '<p>Data calls return 401 for two reasons:</p><ul><li><strong>The token.</strong> The <code>Authorization</code> header is missing or misspelled, or the token expired. Log in again and send <code>Authorization: Bearer &lt;AccessToken&gt;</code>.</li><li><strong>Client ID Security.</strong> When it is on, every call also needs <code>ClientID</code> and <code>ClientSecret</code> headers that match the API’s settings.</li></ul><p>Use a token from this API’s own <code>/Login</code>, in the same environment.</p>', link: decLink('headers', api) };
   }
   function estLogin401(api) {
     return { sev: 'warn', title: 'The account was rejected', body: '<p>The domain controller refused the account' + (api === 'est' ? ', or the account has no access to the Estimate data' : '') + '.</p><ul><li>Check the account format: <code>DOMAIN\\user</code>.</li><li>Confirm the password, and that the account isn’t locked or expired.</li></ul>', link: decLink('login', api) };
   }
   function dbNameCard(api) {
-    return { sev: 'warn', title: 'The DatabaseName header is missing or wrong', body: '<p>Every data call needs a <code>DatabaseName</code> header naming the customer’s ' + dbKind(api) + '. Without it, or with the wrong name, calls fail, come back empty, or return another company’s data.</p><p>Confirm the exact database name with the customer and resend.</p>', link: decLink('headers', api) };
+    return { sev: 'warn', title: 'The DatabaseName header is missing or wrong', body: '<p>Every data call needs a <code>DatabaseName</code> header naming your ' + dbKind(api) + '. Without it, or with the wrong name, calls fail, come back empty, or return another company’s data.</p><p>Confirm the exact database name and resend.</p>', link: decLink('headers', api) };
   }
   function estimateRefCard(api) {
     return { sev: 'warn', title: 'The EstimateREF header is missing or wrong', body: '<p>Estimate-specific calls need an <code>EstimateREF</code> header holding the estimate’s <code>ObjectID</code>. Get it from <code>GET /Estimate</code>' + (api === 'mr' ? ', or use the <code>…All</code> version of the call, which covers every estimate' : '') + '.</p>', link: decLink('headers', api) };
@@ -1169,11 +1173,11 @@
     function (c) { return c.soap ? [95, TS.r_soap] : null; },
     function (c) {
       if (!/ENOTFOUND|EAI_AGAIN|getaddrinfo|remote name could not be resolved|No such host is known|Name or service not known|could not resolve host/i.test(c.text)) return null;
-      return [92, { sev: 'warn', title: 'The server name doesn’t resolve', body: '<p>DNS couldn’t find the host in the address, so the request never reached B2W.</p><ul><li>Check the cluster for typos. Cloud clusters look like <code>b2w-eus10.b2w.trimble.com</code>.</li><li>If the name is right, the customer’s network or DNS can’t see it. Try from another network.</li></ul>', link: decLink('url', c.api) }];
+      return [92, { sev: 'warn', title: 'The server name doesn’t resolve', body: '<p>DNS couldn’t find the host in the address, so the request never reached B2W.</p><ul><li>Check the cluster for typos. Cloud cluster addresses end in <code>.b2w.trimble.com</code>.</li><li>If the name is right, the network or DNS can’t see it. Try from another network.</li></ul>', link: decLink('url', c.api) }];
     },
     function (c) {
       if (!/\bSSL\b|\bTLS\b|certificate|CERT_|self[- ]signed|trust relationship|secure channel/i.test(c.text)) return null;
-      return [88, { sev: 'warn', title: 'The secure connection failed', body: '<p>The HTTPS handshake failed before the API saw the request.</p><ul><li>A proxy or firewall that inspects HTTPS traffic is the usual cause. Have the customer’s IT allow the B2W cluster.</li><li>On-premises servers: check that the site’s certificate is current and trusted.</li><li>Older clients may need TLS 1.2 turned on.</li></ul>', link: decLink('connect', c.api) }];
+      return [88, { sev: 'warn', title: 'The secure connection failed', body: '<p>The HTTPS handshake failed before the API saw the request.</p><ul><li>A proxy or firewall that inspects HTTPS traffic is the usual cause. Have your IT team allow the B2W cluster.</li><li>On-premises servers: check that the site’s certificate is current and trusted.</li><li>Older clients may need TLS 1.2 turned on.</li></ul>', link: decLink('connect', c.api) }];
     },
     function (c) {
       if (!/ECONNREFUSED|ETIMEDOUT|ECONNRESET|ESOCKETTIMEDOUT|Could not get (?:any )?response|Unable to connect to the remote server|No connection could be made|connection (?:was )?(?:refused|closed|reset)|operation (?:has )?timed out|request timed out/i.test(c.text)) return null;
@@ -1182,13 +1186,13 @@
     function (c) {
       var msg = /HTTP Error 503\. The service is unavailable/i.test(c.text);
       if (!msg && c.status !== 503) return null;
-      return [msg ? 92 : 70, { sev: 'danger', title: 'The API’s application pool is stopped', body: '<p>IIS answers 503 when the site is up but the application behind it isn’t running, usually because its application pool stopped or keeps crashing.</p><ul><li>On-premises: start ' + DEC_POOL[c.api] + ' application pool in IIS and check the Windows event log for why it stopped.</li><li>Cloud: escalate to the team that hosts the environment.</li></ul>', link: decLink('connect', c.api) }];
+      return [msg ? 92 : 70, { sev: 'danger', title: 'The API’s application pool is stopped', body: '<p>IIS answers 503 when the site is up but the application behind it isn’t running, usually because its application pool stopped or keeps crashing.</p><ul><li>On-premises: start ' + DEC_POOL[c.api] + ' application pool in IIS and check the Windows event log for why it stopped.</li><li>Cloud: <a href="#contact">contact B2W Support</a>.</li></ul>', link: decLink('connect', c.api) }];
     },
     function (c) {
       if (c.status !== 502 && c.status !== 504) return null;
       return [65, c.status === 504
         ? { sev: 'warn', title: 'The call took too long', body: '<p>A proxy or load balancer gave up waiting for the API.</p><ul><li>Large unfiltered GETs are the usual cause. Narrow the call with <code>$filter</code>, <code>$select</code>, and <code>$top</code>.</li><li>If <code>/Ping/hello</code> also times out, treat the API as down.</li></ul>', link: decLink('query', c.api) }
-        : { sev: 'warn', title: 'A gateway couldn’t reach the API', body: '<p>A proxy or load balancer in front of the API got no valid answer from it.</p><ul><li>Run <code>/Ping/hello</code>. If it fails too, the API site or its application pool is down.</li><li>If Ping works, retry the call and note the time for escalation.</li></ul>', link: decLink('connect', c.api) }];
+        : { sev: 'warn', title: 'A gateway couldn’t reach the API', body: '<p>A proxy or load balancer in front of the API got no valid answer from it.</p><ul><li>Run <code>/Ping/hello</code>. If it fails too, the API site or its application pool is down.</li><li>If Ping works, retry the call and note the time for B2W Support.</li></ul>', link: decLink('connect', c.api) }];
     },
     function (c) { return c.html404 ? [90, badUrlCard(c.api)] : null; },
     function (c) {
@@ -1333,17 +1337,17 @@
     function (c) {
       var m = /Login failed for user '([^']+)'/i.exec(c.text);
       if (!m) return null;
-      if (c.api === 'ops') return [95, { sev: 'danger', title: 'SQL Server refused the API’s database login', body: '<p>The API couldn’t sign in to its database as <code>' + esc(m[1]) + '</code>. This is a server setup problem, not the caller’s credentials.</p><p>Capture the full response and escalate.</p>', link: decLink('trouble', 'ops') }];
+      if (c.api === 'ops') return [95, { sev: 'danger', title: 'SQL Server refused the API’s database login', body: '<p>The API couldn’t sign in to its database as <code>' + esc(m[1]) + '</code>. This is a server setup problem, not the caller’s credentials.</p><p>Capture the full response and <a href="#contact">contact B2W Support</a>.</p>', link: decLink('trouble', 'ops') }];
       var ns = /NETWORK SERVICE/i.test(m[1]);
       return [100, { sev: 'danger', title: ns ? 'The API’s service account can’t open the ' + dbKind(c.api) : 'SQL Server refused the API’s database login', body:
         '<p>The API signs in to SQL Server as <code>' + esc(m[1]) + '</code>' + (ns ? ', which needs db_owner access to the ' + dbKind(c.api) : '') + '. SQL Server refused that login, so the call failed before it reached any data. This isn’t the caller’s fault.</p>' +
-        '<ul><li>On-premises: grant the access' + (c.api === 'est' ? ' with the ConfigureDB commands' : '') + ' (the API docs’ Post-Installation Step)' + (c.api === 'mr' ? ', and check the API’s SQL Server connection string' : '') + '.</li><li>Cloud: escalate to the team that hosts the environment.</li></ul>', link: decLink('trouble', c.api) }];
+        '<ul><li>On-premises: grant the access' + (c.api === 'est' ? ' with the ConfigureDB commands' : '') + ' (the API docs’ Post-Installation Step)' + (c.api === 'mr' ? ', and check the API’s SQL Server connection string' : '') + '.</li><li>Cloud: <a href="#contact">contact B2W Support</a>.</li></ul>', link: decLink('trouble', c.api) }];
     },
     function (c) {
       var m = /Cannot open database "?([^"\n]+?)"? requested by the login/i.exec(c.text);
       if (!m) return null;
-      if (c.api === 'ops') return [97, { sev: 'danger', title: 'SQL Server can’t open the database ' + codeTag(m[1]), body: '<p>The API couldn’t open its database. This is a server setup problem, not the caller’s request. Capture the full response and escalate.</p>', link: decLink('trouble', 'ops') }];
-      return [97, { sev: 'warn', title: 'SQL Server can’t open the database ' + codeTag(m[1]), body: '<p>On the ' + DEC_API[c.api] + ', the database comes from the <code>DatabaseName</code> header. If <code>' + esc(m[1]) + '</code> is what they sent:</p><ul><li>Check the spelling against the customer’s ' + dbKind(c.api) + ' and resend.</li><li>If the name is right, the API’s service account can’t access that database. On-premises: grant it. Cloud: escalate.</li></ul>', link: decLink('headers', c.api) }];
+      if (c.api === 'ops') return [97, { sev: 'danger', title: 'SQL Server can’t open the database ' + codeTag(m[1]), body: '<p>The API couldn’t open its database. This is a server setup problem, not the caller’s request. Capture the full response and <a href="#contact">contact B2W Support</a>.</p>', link: decLink('trouble', 'ops') }];
+      return [97, { sev: 'warn', title: 'SQL Server can’t open the database ' + codeTag(m[1]), body: '<p>On the ' + DEC_API[c.api] + ', the database comes from the <code>DatabaseName</code> header. If <code>' + esc(m[1]) + '</code> is what they sent:</p><ul><li>Check the spelling against your ' + dbKind(c.api) + ' and resend.</li><li>If the name is right, the API’s service account can’t access that database. On-premises: grant it. Cloud: <a href="#contact">contact B2W Support</a>.</li></ul>', link: decLink('headers', c.api) }];
     },
     function (c) {
       if (c.api === 'ops' || !/\bDatabaseName\b/i.test(c.body) || !errorish(c)) return null;
@@ -1356,13 +1360,13 @@
     function (c) {
       if (c.status !== 500 || /Login failed for user|Cannot open database/i.test(c.text)) return null;
       if (c.api === 'ops') return [42, TS.r_500];
-      return [42, { sev: 'danger', title: 'An unexpected API error', body: '<p>Look for a SQL Server message in the full response first: “Login failed” or “Cannot open database” point to database access, not a bug.</p><p>Otherwise, capture the request with secrets removed, the full response, and the date, time, and time zone, then escalate.</p>', link: decLink('trouble', c.api) }];
+      return [42, { sev: 'danger', title: 'An unexpected API error', body: '<p>Look for a SQL Server message in the full response first: “Login failed” or “Cannot open database” point to database access, not a bug.</p><p>Otherwise, capture the request with secrets removed, the full response, and the date, time, and time zone, then <a href="#contact">contact B2W Support</a>.</p>', link: decLink('trouble', c.api) }];
     },
     // Successful responses that still raise questions
     function (c) {
       var m = /"?LastRetrievedFromSourceDatabaseOn"?\s*[:=]\s*"?(\d{4}-\d\d-\d\d[T ][\d:.]+)/i.exec(c.text);
       if (!m) return null;
-      return [errorish(c) ? 20 : 48, { sev: 'info', title: 'This record was loaded on ' + esc(fmtDate(m[1])), body: '<p>The MR API reads the Data Warehouse, not Estimate directly. <code>LastRetrievedFromSourceDatabaseOn</code> says when this record was last copied from its source database.</p><p>If the customer sees old numbers, a change made after that time hasn’t reached the Data Warehouse yet. Check the Data Warehouse load for that source database.</p>', link: ['#mr-troubleshoot', 'Old data'] }];
+      return [errorish(c) ? 20 : 48, { sev: 'info', title: 'This record was loaded on ' + esc(fmtDate(m[1])), body: '<p>The MR API reads the Data Warehouse, not Estimate directly. <code>LastRetrievedFromSourceDatabaseOn</code> says when this record was last copied from its source database.</p><p>If you see old numbers, a change made after that time hasn’t reached the Data Warehouse yet. Check the Data Warehouse load for that source database.</p>', link: ['#mr-troubleshoot', 'Old data'] }];
     },
     function (c) {
       var j = c.json;
@@ -1386,12 +1390,12 @@
     function (c) {
       if (!c.status || c.status >= 300) return null;
       var what = { 200: 'The call worked.', 201: 'The record was created.', 204: 'The call worked and had nothing to return, as a DELETE does.' }[c.status];
-      return [25, { sev: 'ok', title: c.status + ' ' + DEC_CODES[c.status] + ' is a success', body: '<p>' + what + ' If the customer still says something is wrong, look at the data rather than the connection: the filter, the paging, and the headers that pick the data.</p>', link: decLink('query', c.api) }];
+      return [25, { sev: 'ok', title: c.status + ' ' + DEC_CODES[c.status] + ' is a success', body: '<p>' + what + ' If something still looks wrong, look at the data rather than the connection: the filter, the paging, and the headers that pick the data.</p>', link: decLink('query', c.api) }];
     },
     // Anything else with a status code
     function (c) {
       if (!c.status || c.status < 400) return null;
-      return [20, { sev: c.status >= 500 ? 'danger' : 'info', title: c.status + ' ' + DEC_CODES[c.status] + ' from the ' + DEC_API[c.api], body: '<p>The decoder has no specific cause for this one. Capture the request with secrets removed, the full response body, and the date, time, and time zone. Then work the ticket from the troubleshooting steps.</p>', link: decLink('trouble', c.api) }];
+      return [20, { sev: c.status >= 500 ? 'danger' : 'info', title: c.status + ' ' + DEC_CODES[c.status] + ' from the ' + DEC_API[c.api], body: '<p>The decoder has no specific cause for this one. Capture the request with secrets removed, the full response body, and the date, time, and time zone. Then work through the troubleshooting steps, or <a href="#contact">contact B2W Support</a>.</p>', link: decLink('trouble', c.api) }];
     }
   ];
 
@@ -1428,7 +1432,7 @@
         : '<span class="dec-bad">' + icon('i-alert') + 'Not in the ' + DEC_SHORT[c.api] + ' catalog</span>']);
     }
     if (c.priv) f.push(['Privilege', '<code>' + esc(c.priv.raw) + '</code>']);
-    if (c.site) {
+    if (c.site && !/[<>]/.test(c.site.host + c.site.env)) {
       var site = 'https://' + c.site.host + '/' + c.site.env;
       f.push(['Environment', '<code>' + esc(c.site.env) + '</code> <small>' + esc(c.site.host) + '</small> <button class="mini-btn" type="button" data-dec-check="' + esc(site) + '">' + icon('i-signal') + 'Check it</button>']);
     }
@@ -1454,13 +1458,13 @@
   }
 
   var DEC_SAMPLES = [
-    ['Ops 403', 'GET https://b2w-eus10.b2w.trimble.com/OpsAPI_B2WTechSupport/Employee\n403 Forbidden\n{\n    "CustomMessage": "Error occurred: Unable to perform request due to insufficient privileges.",\n    "InternalMessage": "Operation for type Employee required privilege \'ApiEmployee.Read\'; permission was not granted."\n}'],
-    ['Ops login 400', 'GET https://b2w-eus10.b2w.trimble.com/OpsAPI_B2WTechSupport/Login\n400 Bad Request\nAuthentication information must be specified in the request header'],
-    ['LoginWithTID 404', 'GET https://b2w-eus10.b2w.trimble.com/OpsAPI_B2WTechSupport/LoginWithTID\n404 Not Found'],
-    ['PowerShell 401', 'Invoke-RestMethod : The remote server returned an error: (401) Unauthorized.\nAt line:1 char:1\n+ Invoke-RestMethod -Uri "https://b2w-eus10.b2w.trimble.com/OpsAPI_B2WTechSupport/Job" -Headers $headers'],
-    ['Estimate 401', 'GET https://b2w-eus10.b2w.trimble.com/EstAPI_B2WTechSupport/Estimate\n401 Unauthorized\nThe user is not authorized for this API.'],
-    ['MR SQL login', 'GET https://b2w-eus10.b2w.trimble.com/MRAPI_B2WTechSupport/Estimate/PayItem\n500 Internal Server Error\nLogin failed for user \'NT AUTHORITY\\NETWORK SERVICE\'.'],
-    ['Wrong address', 'GET https://b2w-eus10.b2w.trimble.com/B2WTechSupport/Employee\n404 Not Found']
+    ['Ops 403', 'GET https://<cluster>.b2w.trimble.com/OpsAPI_<environment>/Employee\n403 Forbidden\n{\n    "CustomMessage": "Error occurred: Unable to perform request due to insufficient privileges.",\n    "InternalMessage": "Operation for type Employee required privilege \'ApiEmployee.Read\'; permission was not granted."\n}'],
+    ['Ops login 400', 'GET https://<cluster>.b2w.trimble.com/OpsAPI_<environment>/Login\n400 Bad Request\nAuthentication information must be specified in the request header'],
+    ['LoginWithTID 404', 'GET https://<cluster>.b2w.trimble.com/OpsAPI_<environment>/LoginWithTID\n404 Not Found'],
+    ['PowerShell 401', 'Invoke-RestMethod : The remote server returned an error: (401) Unauthorized.\nAt line:1 char:1\n+ Invoke-RestMethod -Uri "https://<cluster>.b2w.trimble.com/OpsAPI_<environment>/Job" -Headers $headers'],
+    ['Estimate 401', 'GET https://<cluster>.b2w.trimble.com/EstAPI_<environment>/Estimate\n401 Unauthorized\nThe user is not authorized for this API.'],
+    ['MR SQL login', 'GET https://<cluster>.b2w.trimble.com/MRAPI_<environment>/Estimate/PayItem\n500 Internal Server Error\nLogin failed for user \'NT AUTHORITY\\NETWORK SERVICE\'.'],
+    ['Wrong address', 'GET https://<cluster>.b2w.trimble.com/<environment>/Employee\n404 Not Found']
   ];
   function mountDecoder(el, n) {
     var id = 'dec-input-' + n;
@@ -1507,7 +1511,7 @@
             return '<details class="dec-alt sev-' + f.card.sev + '"><summary>' + f.card.title + '</summary>' + decCard(f.card, sevLabel[f.card.sev]) + '</details>';
           }).join('') + '</div>';
         }
-        html += '<div class="dec-actions"><button class="mini-btn" type="button" data-dec="summary">' + icon('i-copy') + 'Copy a summary for the ticket</button>' +
+        html += '<div class="dec-actions"><button class="mini-btn" type="button" data-dec="summary">' + icon('i-copy') + 'Copy a summary</button>' +
           (c.status === 401 && !hasJwt ? '<button class="mini-btn" type="button" data-open-modal="token">' + icon('i-key') + 'Inspect a token</button>' : '') + '</div>';
         live.textContent = 'Likely cause: ' + htmlText(top.card.title);
       } else {
@@ -1517,7 +1521,7 @@
         live.textContent = 'No match yet';
       }
       if (c.secret) {
-        html += '<div class="callout warn dec-secret">' + icon('i-shield') + '<div><span class="callout-title">This text includes a live token or secret</span><p>It stays in your browser, but remove it before you paste this into a ticket, chat, or email.</p>' +
+        html += '<div class="callout warn dec-secret">' + icon('i-shield') + '<div><span class="callout-title">This text includes a live token or secret</span><p>It stays in your browser, but remove it before you paste this into an email, chat, or support case.</p>' +
           (hasJwt ? '<p><button class="mini-btn" type="button" data-dec="inspect">' + icon('i-key') + 'Inspect the token</button></p>' : '') + '</div></div>';
       }
       out.innerHTML = html;
@@ -1531,7 +1535,7 @@
     el.addEventListener('click', function (e) {
       var s = e.target.closest('[data-sample]'), act = e.target.closest('[data-dec]'), chkBtn = e.target.closest('[data-dec-check]');
       if (s) {
-        input.value = DEC_SAMPLES[+s.getAttribute('data-sample')][1];
+        input.value = envSwap(DEC_SAMPLES[+s.getAttribute('data-sample')][1]);
         pickApi.value = ''; pickCall.value = '';
         decode();
       } else if (act && act.getAttribute('data-dec') === 'clear') {
@@ -1544,6 +1548,7 @@
         copyText(decSummary(last.c, last.top.card), act);
       } else if (chkBtn) {
         setEnvInput(chkBtn.getAttribute('data-dec-check'));
+        setSiteEnv(chkBtn.getAttribute('data-dec-check'));
         openModal('checker', chkBtn);
       }
     });
@@ -1553,7 +1558,7 @@
   /* ----------------------------------------------------- request builder */
   // Builds one request four ways (Postman, PowerShell, cURL, raw HTTP) for any environment, API,
   // sign-in method, and endpoint. Credentials always stay placeholders, so no secret is typed into
-  // the page or copied into a ticket by accident.
+  // the page or copied into an email by accident.
   var RB_LOGIN = {
     tid: { label: 'TID UUID + User API Secret', h: [['tiduuid', '<your TID ID>', '{{tidUuid}}'], ['apiSecret', '<your User API Secret>', '{{apiSecret}}']] },
     client: { label: 'Client ID + client secret', h: [['clientId', '<client ID>', '{{clientId}}'], ['clientSecret', '<client secret>', '{{clientSecret}}']] },
@@ -1761,7 +1766,7 @@
       row(pm.base, '<code>' + esc(m.base) + '</code>');
     if (m.api !== 'ops') {
       var db = m.call && m.call.headers.filter(function (h) { return h.k === 'DatabaseName'; })[0];
-      html += row('DatabaseName', db ? esc(db.v) : 'The customer’s database') + row('UserName · Password', 'The Active Directory account and its password');
+      html += row('DatabaseName', db ? esc(db.v) : 'Your database') + row('UserName · Password', 'The Active Directory account and its password');
     } else if (m.login) {
       html += row(m.login.headers.map(function (h) { return h.pm.replace(/^Bearer /, '').replace(/[{}]/g, ''); }).join(' · '), 'Your own values');
     }
@@ -1805,7 +1810,7 @@
         '<div class="tool-body">' +
           '<form class="rb-form" novalidate>' +
             '<fieldset class="rb-step"><legend><span class="rb-n">1</span>Environment and API</legend><div class="fields">' +
-              field('env', 'Customer’s Ops address', ' inputmode="url" placeholder="' + DEFAULT_ENV_URL + '"', 'span-2') +
+              field('env', 'Ops address', ' inputmode="url" placeholder="' + DEFAULT_ENV_URL + '"', 'span-2') +
               '<div class="field span-2"><span class="rb-label" id="' + id('apilbl') + '">API</span><div class="rb-seg" role="group" aria-labelledby="' + id('apilbl') + '">' +
                 ['ops', 'est', 'mr'].map(function (k) { return '<button type="button" data-api="' + k + '"><span class="sw sw-' + k + '" aria-hidden="true"></span>' + DEC_SHORT[k] + '</button>'; }).join('') +
               '</div></div>' +
@@ -1995,11 +2000,12 @@
       fhApply();
     });
     function render() {
-      var r = parseEnv(envIn.value || DEFAULT_ENV_URL);
+      var raw = envIn.value.trim() || siteEnvUrl();
+      var r = raw ? parseEnv(raw) : { unset: true, cluster: '<cluster>.b2w.trimble.com', env: '<environment>' };
       if (!r.error) { s.host = r.cluster; s.env = r.env; }
       var m = rbModel(s), notes = [];
       $('.rb-base', el).innerHTML = r.error ? '<span class="rb-warn">' + esc(r.error) + '</span>'
-        : 'Base URL <code>' + esc(m.base) + '</code>';
+        : 'Base URL <code>' + esc(m.base) + '</code>' + (r.unset ? ' · paste the Ops URL above to fill it in' : '');
       // Endpoint check against the catalog
       var hit = decFindEndpoint(s.api, m.path), hint = $('.rb-path-hint', el);
       if (!hit && !/^\/login(withtid)?$/i.test(m.path)) {
@@ -2016,7 +2022,7 @@
       }
       // Notes
       if (m.call && /^(POST|PUT|DELETE)$/.test(m.call.method)) {
-        notes.push(['warn', m.call.method + ' changes real data. Practice in B2WTechSupport. In a customer’s environment, run it only when they asked for the change.']);
+        notes.push(['warn', m.call.method + ' changes real data. Try it in a test environment first, and never against someone else’s environment unless they asked for the change.']);
         if (m.call.method === 'PUT') notes.push(['info', m.api === 'est' ? 'Send the whole record from a fresh GET, with its <code>AntiTamperToken</code> unchanged (<a href="#est-write">question 8</a>).' : 'Send the whole record from a fresh GET, with its <code>ObjectID</code> and <code>RowVersion</code> unchanged (<a href="#create-update-delete">question 15</a>).']);
       }
       if (m.call && m.call.method === 'GET' && !m.open && !(s.q.$top || '').trim()) notes.push(['info', 'Without <code>$top</code>, a GET returns up to 100 records. Page with <code>$top</code> and <code>$skip</code>.']);
@@ -2049,6 +2055,7 @@
     });
     $('form', el).addEventListener('change', function (e) {
       var k = e.target.getAttribute('data-rb');
+      if (k === 'env') setSiteEnv(envIn.value);
       if (k === 'login' || k === 'method') { s[k] = e.target.value; syncForm(); render(); }
     });
     $('.rb-seg', el).addEventListener('click', function (e) { var b = e.target.closest('[data-api]'); if (b) setApi(b.getAttribute('data-api')); });
@@ -2060,6 +2067,8 @@
       el: el,
       // Opened from the top bar: switch to the guide being read, unless the reader has edited it.
       follow: function (p) { if (!edited) setApi(p); },
+      // The guide's environment changed somewhere else on the page.
+      setEnv: function (url) { if (envIn.value !== url) { envIn.value = url; render(); } },
       // Opened from a "filter helper" link: show the helper on a GET.
       openFilter: function () {
         if (s.method !== 'GET' && rbMethods(s.api, s.path).indexOf('GET') > -1) { s.method = 'GET'; syncForm(); render(); }
@@ -2274,7 +2283,7 @@
         return '<tr><td><code>' + esc(k.replace(XMLC, '…/').replace(MSC, '…/')) + '</code>' + (meta[0] ? '<br><small>' + esc(meta[0]) + '</small>' : '') + '</td><td>' + esc(tokValue(k, c[k])) + (meta[1] ? '<br><small>' + esc(meta[1]) + '</small>' : '') + '</td></tr>';
       }).join('');
       html += '<details class="tok-claims"><summary>Everything inside the token (' + Object.keys(c).length + ' claims)</summary><div class="table-wrap"><table><thead><tr><th scope="col">Claim</th><th scope="col">Value</th></tr></thead><tbody>' + rows + '</tbody></table></div></details>';
-      html += '<div class="dec-actions"><button class="mini-btn" type="button" data-tok="summary">' + icon('i-copy') + 'Copy findings for the ticket</button><span class="tok-note">The token itself is never included.</span></div>';
+      html += '<div class="dec-actions"><button class="mini-btn" type="button" data-tok="summary">' + icon('i-copy') + 'Copy findings</button><span class="tok-note">The token itself is never included.</span></div>';
       out.innerHTML = html;
       live.textContent = v.pill[1];
       last = { v: v, c: c, who: who, r: r };
@@ -2308,49 +2317,186 @@
   }
   $$('[data-token]').forEach(mountToken);
   // Open the inspector with a token from elsewhere on the page (the decoder hands one over)
+  /* ---------------------------------------- the guide's environment */
+  // The guide opens with placeholders: https://<cluster>.b2w.trimble.com/OpsAPI_<environment>.
+  // Pasting an Ops URL into an intro card, the environment checker, or the request builder fills
+  // in every example address, link, copy button, and tool across all three guides. The choice is
+  // remembered in this browser, and ?env=<Ops URL> in a link opens the guide already filled in.
+  var BASE_ENV = { cluster: '<cluster>.b2w.trimble.com', env: '<environment>' };
+  var SITE_ENV = null, ENV_KEY = 'opsapi-guide-env', envText = [], envAttrs = [];
+  var ENV_TOKEN = /<environment>|<cluster>\.b2w\.trimble\.com/;
+  var ENV_TOOLS = 'script, style, .svg-sprite, [data-env-card], [data-env-sentence], #env-banner, .checker-mount, .decoder-mount, .builder-mount, .token-mount';
+  var ENV_API = {
+    ops: { name: 'Ops API URL', prefix: 'OpsAPI_' },
+    est: { name: 'Estimate API URL', prefix: 'EstAPI_' },
+    mr: { name: 'MR API URL', prefix: 'MRAPI_' }
+  };
+  function envSwap(text) {
+    if (!SITE_ENV) return text;
+    return String(text).split(BASE_ENV.cluster).join(SITE_ENV.cluster).split(BASE_ENV.env).join(SITE_ENV.env);
+  }
+  function siteEnvUrl() { return SITE_ENV ? 'https://' + SITE_ENV.cluster + '/' + SITE_ENV.env : ''; }
+  // Record every placeholder on the page once, as written, so any environment can be applied.
+  function collectEnvRefs() {
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        return ENV_TOKEN.test(n.nodeValue) && !n.parentNode.closest(ENV_TOOLS) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    while (walker.nextNode()) envText.push([walker.currentNode, walker.currentNode.nodeValue]);
+    $$('[href], [data-copy], [aria-label]').forEach(function (el) {
+      if (el.closest(ENV_TOOLS)) return;
+      ['href', 'data-copy', 'aria-label'].forEach(function (a) {
+        var v = el.getAttribute(a);
+        if (v && ENV_TOKEN.test(v)) envAttrs.push([el, a, v]);
+      });
+    });
+  }
+  function envLink() {
+    return location.href.split('#')[0].split('?')[0] + (SITE_ENV ? '?env=' + encodeURIComponent(siteEnvUrl()) : '') + location.hash;
+  }
+  function envForm(api, label) {
+    return '<form class="env-form" novalidate><label for="env-in-' + api + '">' + label + '</label>' +
+      '<div class="env-row"><input id="env-in-' + api + '" type="text" inputmode="url" spellcheck="false" autocomplete="off" placeholder="https://<cluster>.b2w.trimble.com/YourSite">' +
+      '<button class="btn btn-primary btn-sm" type="submit">Use it</button></div>' +
+      '<p class="env-msg" aria-live="polite"></p></form>';
+  }
+  function renderEnvCards() {
+    var e = SITE_ENV;
+    $$('[data-env-card]').forEach(function (card) {
+      var api = card.getAttribute('data-env-card'), info = ENV_API[api];
+      var input = $('input', card), keep = input ? input.value : '', msg = $('.env-msg', card), keepMsg = msg ? msg.innerHTML : '', keepCls = msg ? msg.className : 'env-msg';
+      card.classList.toggle('is-unset', !e);
+      if (!e) {
+        // First visit: only the prompt. Everything else appears once an address is entered.
+        card.innerHTML = '<div class="env-head">Paste your Ops URL</div>' + envForm(api, 'Your Ops URL') +
+          '<p class="env-note">Every example, link, and tool in the guide fills in with your addresses.</p>';
+      } else {
+        var apiUrl = 'https://' + e.cluster + '/' + info.prefix + e.env;
+        var facts = api === 'ops'
+          ? [['API version', '<a href="' + esc(apiUrl) + '/Version" target="_blank" rel="noopener">Open <code>/Version</code></a>'],
+            ['Trimble ID mode', '<a href="' + esc(apiUrl) + '/SystemInfo" target="_blank" rel="noopener">Open <code>/SystemInfo</code></a>']]
+          : api === 'est'
+            ? [['API version', '<code>v1</code>'], ['Sign-in', 'Active Directory user name and password'], ['Methods', '<span class="m m-sm m-get">GET</span> <span class="m m-sm m-post">POST</span> <span class="m m-sm m-put">PUT</span> · no DELETE']]
+            : [['API version', '<code>v2</code>'], ['Sign-in', 'Active Directory user name and password'], ['Methods', '<span class="m m-sm m-get">GET</span> only · read-only']];
+        card.innerHTML =
+          '<div class="env-head"><span class="live-dot" aria-hidden="true"></span>Your environment<span class="chip">Set</span></div>' +
+          '<dl><dt>Environment</dt><dd><strong>' + esc(e.env) + '</strong></dd>' +
+            (api === 'ops' ? '<dt>Cluster</dt><dd><code>' + esc(e.cluster) + '</code></dd>' : '') +
+            '<dt class="full">' + info.name + '</dt><dd class="full"><div class="copyline" style="margin:0"><code>https://' + esc(e.cluster) + '<wbr>/' + info.prefix + esc(e.env) + '</code>' +
+            '<button class="mini-btn" type="button" data-copy="' + esc(apiUrl) + '" aria-label="Copy the ' + esc(e.env) + ' ' + esc(info.name.replace(' URL', '')) + ' address">' + icon('i-copy') + 'Copy</button></div></dd>' +
+            facts.map(function (f) { return '<dt>' + f[0] + '</dt><dd>' + f[1] + '</dd>'; }).join('') + '</dl>' +
+          '<div class="env-actions"><button class="mini-btn" type="button" data-env="link">' + icon('i-link') + 'Copy a link with this environment</button>' +
+            '<button class="mini-btn" type="button" data-env="reset">Clear</button></div>' +
+          envForm(api, 'Use a different Ops URL');
+      }
+      $('input', card).value = keep;
+      var m = $('.env-msg', card);
+      m.innerHTML = keepMsg; m.className = keepCls;
+    });
+  }
+  function renderEnvSentences() {
+    $$('[data-env-sentence]').forEach(function (el) {
+      el.innerHTML = SITE_ENV ? 'Every example uses the <strong>' + esc(SITE_ENV.env) + '</strong> environment.'
+        : 'Paste your Ops URL into the card to fill in every example.';
+    });
+  }
+  function renderEnvBanner() {
+    var b = $('#env-banner');
+    b.hidden = !SITE_ENV;
+    if (b.hidden) { b.innerHTML = ''; return; }
+    b.innerHTML = icon('i-signal') + '<span>Examples use the <b>' + esc(SITE_ENV.env) + '</b> environment on <code>' + esc(SITE_ENV.cluster) + '</code>.</span>' +
+      '<span class="env-banner-acts"><button class="mini-btn" type="button" data-env="change">Change</button>' +
+      '<button class="mini-btn" type="button" data-env="link">' + icon('i-link') + 'Copy a link</button>' +
+      '<button class="mini-btn" type="button" data-env="reset">Clear</button></span>';
+  }
+  // Fill the guide in with an environment, or clear it with ''. Returns an error message, or ''.
+  function setSiteEnv(value, opts) {
+    opts = opts || {};
+    var next = null;
+    if (String(value || '').trim()) {
+      var r = parseEnv(value);
+      if (r.error) return r.error;
+      next = { cluster: r.cluster, env: r.env };
+    }
+    var same = next && SITE_ENV ? next.cluster === SITE_ENV.cluster && next.env === SITE_ENV.env : !next && !SITE_ENV;
+    SITE_ENV = next;
+    if (!opts.noSave) store.set(ENV_KEY, siteEnvUrl());
+    if (same && !opts.force) return '';
+    envText.forEach(function (x) { x[0].nodeValue = envSwap(x[1]); });
+    envAttrs.forEach(function (x) { x[0].setAttribute(x[1], envSwap(x[2])); });
+    $('#hdr-docs').href = envSwap(PRODUCTS[currentProduct()].docs);
+    $('#hdr-collection').href = envSwap(PRODUCTS[currentProduct()].collection);
+    var url = siteEnvUrl(), now = parseEnv(chk.input);
+    if (next ? now.error || now.env !== next.env || now.cluster !== next.cluster : !chk.unset) setEnvInput(url);
+    builders.forEach(function (b) { if (b.setEnv) b.setEnv(url); });
+    renderEnvCards();
+    renderEnvSentences();
+    renderEnvBanner();
+    return '';
+  }
+  // Links that still hold placeholders lead nowhere: ask for the Ops URL instead.
+  function askForEnv(hint) {
+    if (openDialog) closeModal(false);
+    var card = $('.product-view[data-view="' + currentProduct() + '"] [data-env-card]');
+    if (!card) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    var m = $('.env-msg', card), input = $('input', card);
+    m.className = 'env-msg warn';
+    m.textContent = hint || 'Paste your Ops URL first. Then that link opens your environment’s page.';
+    input.focus({ preventScroll: true });
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('a[href]');
+    if (a && /<environment>|<cluster>|%3Cenvironment%3E|%3Ccluster%3E/i.test(a.getAttribute('href'))) { e.preventDefault(); askForEnv(); }
+  }, true);
+  document.addEventListener('submit', function (e) {
+    var card = e.target.closest('[data-env-card]');
+    if (!card) return;
+    e.preventDefault();
+    var api = card.getAttribute('data-env-card'), input = $('input', card), value = input.value.trim(), msg = $('.env-msg', card);
+    if (!value) { msg.className = 'env-msg warn'; msg.textContent = 'Paste an Ops URL first, such as https://<cluster>.b2w.trimble.com/YourSite.'; input.focus(); return; }
+    var err = setSiteEnv(value);
+    var fresh = $('[data-env-card="' + api + '"]'), m = $('.env-msg', fresh), inp = $('input', fresh);
+    if (err) { inp.value = value; m.className = 'env-msg warn'; m.textContent = err; inp.focus(); }
+    else { inp.value = ''; m.className = 'env-msg ok'; m.textContent = 'Every example in the guide now uses ' + SITE_ENV.env + '.'; }
+  });
+  document.addEventListener('paste', function (e) {
+    var card = e.target.closest && e.target.closest('[data-env-card]');
+    if (card && e.target.tagName === 'INPUT') setTimeout(function () { $('form', card).requestSubmit(); }, 0);
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-env]');
+    if (!b) return;
+    var act = b.getAttribute('data-env');
+    if (act === 'reset') {
+      setSiteEnv('');
+      var msg = $('.product-view[data-view="' + currentProduct() + '"] [data-env-card] .env-msg');
+      if (msg) { msg.className = 'env-msg ok'; msg.textContent = 'Cleared. Paste an Ops URL to fill the examples in again.'; }
+    } else if (act === 'link') {
+      copyText(envLink(), b);
+    } else if (act === 'change') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      var input = $('.product-view[data-view="' + currentProduct() + '"] [data-env-card] input');
+      if (input) input.focus({ preventScroll: true });
+    }
+  });
+
+  collectEnvRefs();
+  (function () {
+    var fromLink = null;
+    try { fromLink = new URLSearchParams(location.search).get('env'); } catch (e) { /* old browser */ }
+    var start = fromLink || store.get(ENV_KEY);
+    // No address, or one that no longer reads: start with the placeholders.
+    if (!start || setSiteEnv(start, { force: true })) setSiteEnv('', { force: true });
+  })();
+
   function inspectToken(text, trigger) {
     if (!tokenTool) return;
     openModal('token', trigger);
     tokenTool.load(text);
   }
 
-  /* ---------------------------------------------------------------- quiz */
-  var quizItems = $$('.quiz-item'), scoreText = $('#quiz-score-text'), meter = $('#quiz-meter');
-  function updateScore() {
-    var answered = 0, right = 0;
-    quizItems.forEach(function (it) { if (it.dataset.done) { answered++; if (it.dataset.done === 'right') right++; } });
-    scoreText.textContent = answered === quizItems.length
-      ? 'You got ' + right + ' of ' + quizItems.length + ' right'
-      : answered + ' of ' + quizItems.length + ' answered · ' + right + ' right';
-    meter.style.width = (right / quizItems.length * 100) + '%';
-  }
-  quizItems.forEach(function (it) {
-    it.addEventListener('change', function (e) {
-      if (it.dataset.done || e.target.type !== 'radio') return;
-      var correct = it.getAttribute('data-answer'), picked = e.target.value, ok = picked === correct;
-      it.dataset.done = ok ? 'right' : 'wrong';
-      $$('input', it).forEach(function (inp) {
-        inp.disabled = true;
-        var lab = inp.closest('label');
-        if (inp.value === correct) lab.classList.add('right');
-        else if (inp.value === picked) lab.classList.add('wrong');
-      });
-      var fb = $('.quiz-fb', it);
-      fb.className = 'quiz-fb ' + (ok ? 'right' : 'wrong');
-      fb.innerHTML = '<b>' + (ok ? 'Correct.' : 'Not quite.') + '</b>' + esc(fb.getAttribute('data-why'));
-      fb.hidden = false;
-      updateScore();
-    });
-  });
-  $('#quiz-reset').addEventListener('click', function () {
-    quizItems.forEach(function (it) {
-      delete it.dataset.done;
-      $$('input', it).forEach(function (inp) { inp.disabled = false; inp.checked = false; inp.closest('label').classList.remove('right', 'wrong'); });
-      $('.quiz-fb', it).hidden = true;
-    });
-    updateScore();
-  });
-  updateScore();
 
   /* ------------------------------------------------------------ lightbox */
   var lb = $('#lightbox'), lbImg = $('#lightbox-img'), lbCap = $('#lightbox-cap'), lbClose = $('#lightbox-close'), lbReturn = null;
