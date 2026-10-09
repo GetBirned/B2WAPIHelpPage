@@ -77,6 +77,8 @@ Links that open a specific guide or question directly:
 
 The repo deploys to Railway as-is, at https://www.b2w-api.com (GoDaddy forwards the bare b2w-api.com there, since its DNS can't point the bare domain at Railway). The `Staticfile` in the root tells Railpack to serve `dist/` as a static site (with Caddy): `index.html` is the guide, `downloads/` holds the Postman collections, and `og-image.png` is the picture link previews show. There is no build step on Railway: `dist/` is committed, so run `python build.py` (and `node tools/export-pdf.js` when the content changes) and commit before deploying a change.
 
+The site is kept out of search results for now: `src/index.html` has a `noindex` robots tag, and `src/robots.txt` (copied to `dist/`) blocks the downloads and PDFs. Remove both to let search engines list it.
+
 The site is public. Before publishing anything, check that it has no environment addresses, internal links, credentials, or personal details (see the sections above and below).
 
 ## Edit it

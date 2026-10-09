@@ -1,0 +1,5 @@
+# The site is kept out of search results for now: each page carries a noindex tag, so pages stay
+# crawlable (crawlers have to read the tag), and files that can't carry one are blocked here.
+User-agent: *
+Disallow: /downloads/
+Disallow: /*.pdf$

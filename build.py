@@ -6,6 +6,7 @@ Reads src/ (index.html, styles.css, fields.js, app.js, images/, downloads/) and 
     dist/B2W-API-Help-Guide.html    the same page, under a name that reads well as a shared file
     dist/downloads/*.json           the Postman collections the guide's buttons download
     dist/og-image.png               the picture shown when someone shares a link to the site
+    dist/robots.txt                 tells search engines what not to crawl
 
 The page has its CSS, JS, and every image inlined, so it also works as a single file opened from
 disk (the download buttons need dist/downloads next to it). Standard library only.
@@ -73,6 +74,7 @@ def main() -> None:
     (DIST / DOWNLOADS).mkdir()
     for d in sorted(downloads):
         shutil.copy2(SRC / d, DIST / d)
+    shutil.copy2(SRC / "robots.txt", DIST / "robots.txt")
     if OG_IMAGE.exists():
         shutil.copy2(OG_IMAGE, DIST / "og-image.png")
 

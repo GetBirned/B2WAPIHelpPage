@@ -2289,11 +2289,13 @@
       facts.push(['Signature', esc(r.header.alg || 'unknown') + (r.unsigned ? ' <small>no signature: not a real AccessToken</small>' : ' <small>not checked here, that needs the server’s key</small>')]);
       html += '<dl class="dec-facts">' + facts.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>';
       html += decCard(v.card, v.card.sev === 'ok' ? 'Not an expiry problem' : v.card.sev === 'info' ? 'Good to know' : 'Likely cause');
-      var rows = Object.keys(c).map(function (k) {
+      // The MR guide leaves out the pwd claim: it never helps answer a question, and it worries readers.
+      var keys = Object.keys(c).filter(function (k) { return !(v.api === 'mr' && k.toLowerCase() === 'pwd'); });
+      var rows = keys.map(function (k) {
         var meta = TOK_CLAIMS[k] || [];
         return '<tr><td><code>' + esc(k.replace(XMLC, '…/').replace(MSC, '…/')) + '</code>' + (meta[0] ? '<br><small>' + esc(meta[0]) + '</small>' : '') + '</td><td>' + esc(tokValue(k, c[k])) + (meta[1] ? '<br><small>' + esc(meta[1]) + '</small>' : '') + '</td></tr>';
       }).join('');
-      html += '<details class="tok-claims"><summary>Everything inside the token (' + Object.keys(c).length + ' claims)</summary><div class="table-wrap"><table><thead><tr><th scope="col">Claim</th><th scope="col">Value</th></tr></thead><tbody>' + rows + '</tbody></table></div></details>';
+      html += '<details class="tok-claims"><summary>Everything inside the token (' + keys.length + ' claims)</summary><div class="table-wrap"><table><thead><tr><th scope="col">Claim</th><th scope="col">Value</th></tr></thead><tbody>' + rows + '</tbody></table></div></details>';
       html += '<div class="dec-actions"><button class="mini-btn" type="button" data-tok="summary">' + icon('i-copy') + 'Copy findings</button><span class="tok-note">The token itself is never included.</span></div>';
       out.innerHTML = html;
       live.textContent = v.pill[1];
